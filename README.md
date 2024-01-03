@@ -1,6 +1,6 @@
 Align trade strategy with the expected market conditions based on historical patterns and observed volatility dynamics.
 
-# Vol Parameters and option trade Strategies:
+### Vol Parameters and option trade Strategies:
 Implied Volatility (IV):
 Increase in IV: Straddle and Strangle, benefit from larger price movements in either direction.
 Decrease in IV: Butterfly and Iron Condor, profit from stable or decreasing volatility
@@ -21,10 +21,10 @@ Option Convexity:
 High Convexity (significant curvature): Long Straddles or Long Strangles: benefit from large price movements.
 Low Convexity (less curvature): Short Iron Condors: where small price movements are favorable.
 
-# Expectations
+### Expectations
 <img width="624" alt="Screenshot 2024-01-03 at 00 14 34" src="https://github.com/Aurelie-Dubost/xeu/assets/61312165/a81a01c6-a542-45cd-9484-e27949cd2cd3">
 
-# Modelling
+### Modelling
 Setting thresholds for each parameter. For instance:
 - If IV increases by X%: Opt for a Straddle/Strangle.
 - If RV is consistently higher than IV by Y%: Consider Long Volatility strategies.

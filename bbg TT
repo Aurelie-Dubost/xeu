@@ -1,0 +1,67 @@
+import blpapi
+
+"""
+Define Your Portfolio: List the options you have in your portfolio along with their quantities, strike prices, and other relevant details.
+
+Retrieve Current Prices: Use Bloomberg functions to get the current prices of these options.
+
+Calculate PnL: For each option, calculate the PnL based on the difference between the current price and the price at which the option was acquired (or its strike price, depending on your PnL calculation method).
+
+Summarize Portfolio PnL: Sum the PnL of all individual options to get the total portfolio PnL.
+"""
+
+# Initialize a session to Bloomberg
+session = blpapi.Session()
+if not session.start():
+    print("Failed to start session.")
+    exit()
+
+if not session.openService("//blp/refdata"):
+    print("Failed to open //blp/refdata")
+    session.stop()
+    exit()
+
+refDataService = session.getService("//blp/refdata")
+request = refDataService.createRequest("ReferenceDataRequest")
+
+# Define your portfolio: Option symbols, their quantities, and cost basis
+portfolio = {
+    "AAPL 150121C00145000": {"quantity": 10, "cost_basis": 5.50},  # Example values
+    "MSFT 150121P00200000": {"quantity": 5, "cost_basis": 2.75},
+    # Add more options as needed
+}
+
+# Add securities and fields to request
+for symbol in portfolio.keys():
+    request.append("securities", symbol)
+request.append("fields", "PX_LAST")  # Last price
+
+# Send the request
+print("Sending Request:", request)
+session.sendRequest(request)
+
+# Process received data and calculate PnL
+pnl = 0
+while True:
+    ev = session.nextEvent()
+    for msg in ev:
+        if ev.eventType() in (blpapi.Event.RESPONSE, blpapi.Event.PARTIAL_RESPONSE):
+            print("Response:", msg)
+            # Process the response to calculate PnL
+            securityDataArray = msg.getElement("securityData")
+            for securityData in securityDataArray.values():
+                ticker = securityData.getElementAsString("security")
+                if securityData.hasElement("fieldData"):
+                    fieldData = securityData.getElement("fieldData")
+                    lastPrice = fieldData.getElementAsFloat("PX_LAST")
+                    optionInfo = portfolio[ticker]
+                    optionPnL = optionInfo["quantity"] * (lastPrice - optionInfo["cost_basis"])
+                    pnl += optionPnL
+                    print(f"PnL for {ticker}: {optionPnL}")
+
+    if ev.eventType() == blpapi.Event.RESPONSE:
+        break
+
+print("Total Portfolio PnL:", pnl)
+
+session.stop()

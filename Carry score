@@ -1,0 +1,53 @@
+import pandas as pd
+import numpy as np
+
+# Creating a fake data frame with necessary columns
+# Assume these are the calculated values for IV, RV, mean VRP, OHLC daily std dev for different contracts
+
+data = {
+    'Contract': ['1-month', '3-month', '6-month'],
+    'IV': np.random.uniform(10, 30, 3),  # Implied Volatility
+    'RV_10': np.random.uniform(5, 15, 3),  # Realized Volatility for 10 days (1-month contract)
+    'RV_21': np.random.uniform(10, 20, 3),  # Realized Volatility for 21 days (3-month contract)
+    'Mean_VRP': np.random.uniform(2, 8, 3),  # Mean VRP
+    'OHLC_Std_Dev': np.random.uniform(1, 5, 3)  # OHLC daily standard deviation
+}
+
+df = pd.DataFrame(data)
+
+# Function to calculate VRP based on contract maturity
+def calculate_vrp(row):
+    if row['Contract'] == '1-month':
+        return row['IV'] - row['RV_10']
+    elif row['Contract'] == '3-month':
+        return row['IV'] - row['RV_21']
+    # Assume similar logic for other maturities
+    else:
+        return row['IV'] - row['RV_21']  # Placeholder
+
+# Apply the function to calculate VRP
+df['VRP'] = df.apply(calculate_vrp, axis=1)
+
+# Function to calculate carry score
+def calculate_carry_score(row):
+    if row['Contract'] == '1-month':
+        # Shorter maturity: Higher weight to RV
+        weights = {'IV': 1, 'VRP': 1, 'Mean_VRP': 1, 'OHLC_Std_Dev': 1}
+    elif row['Contract'] == '3-month':
+        # Longer maturity: Higher weight to IV
+        weights = {'IV': 3, 'VRP': 1, 'Mean_VRP': 1, 'OHLC_Std_Dev': 1}
+    else:
+        # Placeholder for other contract types
+        weights = {'IV': 1, 'VRP': 1, 'Mean_VRP': 1, 'OHLC_Std_Dev': 1}
+
+    carry_score = (weights['IV'] * row['IV'] + 
+                   weights['VRP'] * row['VRP'] + 
+                   weights['Mean_VRP'] * row['Mean_VRP'] + 
+                   weights['OHLC_Std_Dev'] * row['OHLC_Std_Dev'])
+    return carry_score
+
+# Apply the function to calculate carry score
+df['Carry_Score'] = df.apply(calculate_carry_score, axis=1)
+
+df
+

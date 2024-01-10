@@ -1,9 +1,14 @@
+# Importing necessary libraries
 import pandas as pd
 import numpy as np
 
+# This script creates a fake data frame to simulate the calculation of carry scores for derivative contracts.
+# The carry score is calculated based on several components: Implied Volatility (IV), Realized Volatility (RV),
+# Mean Volatility Risk Premium (Mean VRP), and OHLC daily standard deviation. These components are weighted
+# differently based on the maturity of the derivative contracts.
+
 # Creating a fake data frame with necessary columns
 # Assume these are the calculated values for IV, RV, mean VRP, OHLC daily std dev for different contracts
-
 data = {
     'Contract': ['1-month', '3-month', '6-month'],
     'IV': np.random.uniform(10, 30, 3),  # Implied Volatility
@@ -17,19 +22,43 @@ df = pd.DataFrame(data)
 
 # Function to calculate VRP based on contract maturity
 def calculate_vrp(row):
+    """
+    Calculate the Volatility Risk Premium (VRP) for a given contract.
+    
+    The VRP is calculated as the difference between the Implied Volatility (IV)
+    and the Realized Volatility (RV), where RV is selected based on the contract's maturity.
+    
+    Parameters:
+    row (pd.Series): A row from the DataFrame representing a contract.
+    
+    Returns:
+    float: The calculated VRP for the contract.
+    """
     if row['Contract'] == '1-month':
         return row['IV'] - row['RV_10']
     elif row['Contract'] == '3-month':
         return row['IV'] - row['RV_21']
-    # Assume similar logic for other maturities
+    # Placeholder for other maturities
     else:
-        return row['IV'] - row['RV_21']  # Placeholder
+        return row['IV'] - row['RV_21']
 
 # Apply the function to calculate VRP
 df['VRP'] = df.apply(calculate_vrp, axis=1)
 
 # Function to calculate carry score
 def calculate_carry_score(row):
+    """
+    Calculate the carry score for a derivative contract.
+    
+    The carry score is a weighted sum of various components: IV, VRP, Mean VRP, and OHLC Std Dev.
+    The weights are adjusted based on the maturity of the contract.
+    
+    Parameters:
+    row (pd.Series): A row from the DataFrame representing a contract.
+    
+    Returns:
+    float: The calculated carry score for the contract.
+    """
     if row['Contract'] == '1-month':
         # Shorter maturity: Higher weight to RV
         weights = {'IV': 1, 'VRP': 1, 'Mean_VRP': 1, 'OHLC_Std_Dev': 1}
@@ -50,4 +79,3 @@ def calculate_carry_score(row):
 df['Carry_Score'] = df.apply(calculate_carry_score, axis=1)
 
 df
-

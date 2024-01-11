@@ -1,0 +1,13 @@
+### Create a Voila app for monitoring the market with customizable parameters for the underlying asset, start date, and end date
+
+Retrieve Market Data Function: Create a Python function to fetch data from Yahoo Finance. This function should take the underlying symbol, start date, and end date as input parameters.
+
+Voila App Structure: Set up a Voila app with an interactive interface. The first line of the app will contain input widgets for the user to customize the underlying symbol, start date, and end date.
+
+Tabs for Returns: Implement tabs in the app to display daily, weekly, monthly, and year-to-date (YTD) returns. Each tab will show a chart or a table representing the respective returns.
+
+Automatic Refresh: Ensure that the tabs and charts are automatically refreshed when any of the input parameters (underlying, start date, end date) are changed.
+
+Deployment: Deploy the app using Voila.
+
+Let's start by creating the Python function to fetch market data. We will use yfinance, a popular library for fetching historical market data from Yahoo Finance.

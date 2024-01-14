@@ -1,0 +1,94 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from ipywidgets import interact, widgets, Output, HBox, VBox
+
+# Creating a mock dataset for portfolio performance
+np.random.seed(0)
+dates = pd.date_range(start="2020-01-01", end="2022-12-31", freq='B')
+n_assets = 4
+asset_names = [f'Asset_{i}' for i in range(1, n_assets + 1)]
+n_portfolios = 3
+portfolio_names = [f'Portfolio_{i}' for i in range(1, n_portfolios + 1)]
+
+# Simulating random daily returns for each asset and portfolio
+returns = np.random.normal(0, 0.01, size=(len(dates), n_assets))
+portfolio_returns = pd.DataFrame(data=returns, columns=asset_names, index=dates)
+portfolio_returns = pd.concat([portfolio_returns] * n_portfolios, axis=1)
+portfolio_returns.columns = pd.MultiIndex.from_product([portfolio_names, asset_names])
+
+def calculate_normalized_returns(start_date, end_date, selected_portfolios, selected_assets):
+    """
+    Calculate normalized cumulative returns for selected portfolios and assets.
+
+    Parameters:
+        start_date (datetime): Start date for the analysis.
+        end_date (datetime): End date for the analysis.
+        selected_portfolios (list of str): List of selected portfolio names.
+        selected_assets (list of str): List of selected asset names.
+
+    Returns:
+        DataFrame: DataFrame containing normalized cumulative returns.
+    """
+    filtered_data = portfolio_returns.loc[start_date:end_date, (selected_portfolios, selected_assets)]
+    cumulative_returns = (1 + filtered_data).cumprod()
+    normalized_returns = cumulative_returns.div(cumulative_returns.iloc[0])
+    return normalized_returns
+
+# Output widget to update plots in place
+plot_output = Output()
+
+# Function to plot normalized portfolio performance dynamically
+def plot_performance_dynamic(start_date, end_date, selected_portfolios, selected_assets):
+    """
+    Plot normalized portfolio performance dynamically based on user selection.
+
+    Parameters:
+        start_date (datetime): Start date for the analysis.
+        end_date (datetime): End date for the analysis.
+        selected_portfolios (list of str): List of selected portfolio names.
+        selected_assets (list of str): List of selected asset names.
+    """
+    with plot_output:
+        plot_output.clear_output(wait=True)  # Clear the previous plot
+        normalized_returns = calculate_normalized_returns(start_date, end_date, selected_portfolios, selected_assets)
+        
+        # Plotting
+        plt.figure(figsize=(12, 6))
+        for asset in selected_assets:
+            for portfolio in selected_portfolios:
+                label = f'{portfolio} - {asset}'
+                normalized_returns[portfolio, asset].plot(label=label)
+        
+        plt.title(f'Portfolio Performance from {start_date} to {end_date}')
+        plt.xlabel('Date')
+        plt.ylabel('Normalized Cumulative Returns')
+        plt.grid(True)
+        plt.legend()
+        plt.show()
+
+# Creating widgets for interactive input
+start_date_widget = widgets.DatePicker(description='Start Date', value=pd.to_datetime('2020-01-01'))
+end_date_widget = widgets.DatePicker(description='End Date', value=pd.to_datetime('2022-12-31'))
+portfolios_widget = widgets.SelectMultiple(options=portfolio_names, value=[portfolio_names[0]], description='Portfolios')
+assets_widget = widgets.SelectMultiple(options=asset_names, value=[asset_names[0], asset_names[1]], description='Assets')
+
+# Function to be called when widgets change
+def on_change(change):
+    selected_portfolios = list(portfolios_widget.value)
+    selected_assets = list(assets_widget.value)
+    start_date = start_date_widget.value
+    end_date = end_date_widget.value
+    plot_performance_dynamic(start_date, end_date, selected_portfolios, selected_assets)
+
+# Assign the on_change function to be called on widget changes
+start_date_widget.observe(on_change, names='value')
+end_date_widget.observe(on_change, names='value')
+portfolios_widget.observe(on_change, names='value')
+assets_widget.observe(on_change, names='value')
+
+# Display widgets and initial plot
+widgets_box = VBox([HBox([start_date_widget, end_date_widget]), HBox([portfolios_widget, assets_widget]), plot_output])
+display(widgets_box)
+# Initialize with a plot
+on_change(None)

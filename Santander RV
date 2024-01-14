@@ -1,0 +1,90 @@
+# Define a function for the Close-to-Close volatility estimator
+def close_to_close_volatility(closes):
+    """
+    Calculate the close-to-close volatility.
+    Most common measure of historical volatility, using the standard deviation of log returns from closing prices of consecutive days. 
+    Reliable and simple but doesn't account for movements outside of regular trading hours.
+    """
+    n = len(closes)
+    mean_close = np.mean(closes)
+    variance = np.sum((closes - mean_close) ** 2) / (n - 1)
+    volatility = np.sqrt(variance)
+    return volatility
+
+# Define a function for the Parkinson volatility estimator
+def parkinson_volatility(highs, lows):
+    """
+    Calculate the Parkinson volatility estimator.
+    An advanced estimator using high and low prices to capture intraday movements. 
+    It is more sensitive to market swings within the trading day but assumes continuous trading and hence may underestimate volatility.
+    """
+    n = len(highs)
+    sum_ln = np.sum((np.log(highs / lows)) ** 2)
+    volatility = np.sqrt((1 / (4 * np.log(2))) * (sum_ln / n))
+    return volatility
+
+# Define a function for the Garman-Klass volatility estimator
+def garman_klass_volatility(opens, highs, lows, closes):
+    """
+    Calculate the Garman-Klass volatility estimator.
+    Extension of the Parkinson estimator and accounts for overnight price jumps.
+    """
+    n = len(opens)
+    term1 = (np.log(highs / lows)) ** 2
+    term2 = (2 * np.log(2) - 1) * (np.log(closes / opens)) ** 2
+    sum_terms = np.sum(term1 - term2)
+    volatility = np.sqrt(sum_terms / (n * np.log(2)))
+    return volatility
+
+# Define a function for the Rogers-Satchell volatility estimator
+def rogers_satchell_volatility(opens, highs, lows, closes):
+    """
+    Calculate the Rogers-Satchell volatility estimator.
+
+    Takes non-zero mean returns into account, providing a more sophisticated measure of volatility, especially useful for securities with non-zero drift. 
+    However, it doesn't account for jumps.
+    """
+    n = len(opens)
+    term1 = np.log(highs / closes) * np.log(highs / opens)
+    term2 = np.log(lows / closes) * np.log(lows / opens)
+    sum_terms = np.sum(term1 + term2)
+    volatility = np.sqrt(sum_terms / n)
+    return volatility
+
+# Define a function for the Yang-Zhang volatility estimator
+def yang_zhang_volatility(open_prices, high_prices, low_prices, close_prices, k=0.34):
+    """
+    Calculate the Yang-Zhang volatility estimator.
+    :param k: A constant used in the Yang-Zhang volatility estimator.
+    :return: The Yang-Zhang volatility estimator.
+    Combines the strengths of the previous measures to handle both opening jumps and drift. 
+    It is considered the most powerful estimator and uses overnight volatility, a weighted average of Rogers-Satchell, and open-to-close volatility.
+    The Yang-Zhang volatility appears significantly larger due to the combined effect of overnight, 
+    open-to-close, and close-to-close volatilities, as well as the test data used.
+    """
+    n = len(close_prices)
+    # Calculate overnight volatility
+    sigma_over = np.sqrt(np.sum((np.log(open_prices[1:] / close_prices[:-1])) ** 2) / (n - 1))
+    # Calculate open to close volatility
+    sigma_oc = np.sqrt(np.sum((np.log(close_prices / open_prices)) ** 2) / (n - 1))
+    # Calculate close to close volatility
+    sigma_cc = close_to_close_volatility(close_prices)
+    # Combine the volatilities using the Yang-Zhang formula
+    sigma_yz = np.sqrt(k * sigma_over + (1 - k) * sigma_oc + (1 - k) * sigma_cc ** 2)
+    return sigma_yz
+
+# Example usage (with dummy data, replace with actual financial data)
+# Note: In a real scenario, these would be arrays of daily open, high, low, and close prices.
+opens = np.array([100, 101, 102, 103, 104])
+highs = np.array([105, 106, 107, 108, 109])
+lows = np.array([99, 98, 97, 96, 95])
+closes = np.array([101, 102, 103, 104, 105])
+
+close_to_close_vol = close_to_close_volatility(closes)
+parkinson_vol = parkinson_volatility(highs, lows)
+garman_klass_vol = garman_klass_volatility(opens, highs, lows, closes)
+rogers_satchell_vol = rogers_satchell_volatility(opens, highs, lows, closes)
+yang_zhang_vol = yang_zhang_volatility(opens, highs, lows, closes, k=0.34)
+
+(close_to_close_vol, parkinson_vol, garman_klass_vol, 
+ rogers_satchell_vol, yang_zhang_vol)

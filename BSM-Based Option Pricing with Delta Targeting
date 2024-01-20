@@ -1,0 +1,102 @@
+import pandas as pd
+import numpy as np
+from scipy.stats import norm
+from scipy.optimize import brentq
+
+"""
+These functions form a pipeline for pricing options using the Black-Scholes model and finding a specific strike price based on a target delta. 
+Each function is modular and serves a specific purpose, which allows for easy testing, maintenance, and the potential for reuse in other option pricing contexts.
+"""
+
+"""
+Functions 
+"""
+
+# Function to calculate d1 and d2
+def d1_d2(S, K, T, r, sigma):
+    """
+    Calculate the d1 and d2 terms used in the Black-Scholes formula.
+    :return: A tuple containing d1 and d2.
+    """
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    return d1, d2
+
+# Black-Scholes formula
+    """
+    Calculate the theoretical price of a European call or put option using the Black-Scholes formula.
+     :return: The theoretical price of the option.
+    """
+def black_scholes(S, K, T, r, sigma, option_type="call"):
+    d1, d2 = d1_d2(S, K, T, r, sigma)
+    if option_type == "call":
+        option_price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+    else:
+        option_price = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
+    return option_price
+
+# Function to find the strike price given a target delta
+def find_strike_for_delta(S, T, r, sigma, target_delta, option_type="call"):
+    """
+    Find the strike price for an option given a target delta value.
+    :return: The strike price that yields the target delta.
+    """
+        def delta_difference(K):
+        d1, _ = d1_d2(S, K, T, r, sigma)
+        delta = norm.cdf(d1) if option_type == "call" else -norm.cdf(-d1)
+        return delta - target_delta
+
+    strike = brentq(delta_difference, a=S*0.5, b=S*1.5)
+    return strike
+
+def calculate_option_premiums(data, T, target_delta, option_type="call"):
+    """
+    Calculate the strike price and option premium for each row in the DataFrame.
+
+    :param data: DataFrame with historical data including 'S' (stock price), 'sigma' (implied volatility), 'r' (risk-free rate)
+    :param T: Time to maturity (in years)
+    :param target_delta: Target delta value for the option
+    :param option_type: Type of the option ('call' or 'put')
+    :return: DataFrame with additional columns for 'strike_price' and 'option_premium'
+    """
+    # Add columns for strike price and option premium
+    data['strike_price'] = np.nan
+    data['option_premium'] = np.nan
+
+    for index, row in data.iterrows():
+        S = row['S']
+        sigma = row['sigma']
+        r = row['r']
+        
+        # Find strike price for target delta
+        strike_price = find_strike_for_delta(S, T, r, sigma, target_delta, option_type)
+        
+        # Calculate option premium
+        option_premium = black_scholes(S, strike_price, T, r, sigma, option_type)
+        
+        # Store in DataFrame
+        data.at[index, 'strike_price'] = strike_price
+        data.at[index, 'option_premium'] = option_premium
+    
+    return data
+
+"""
+Appication 
+"""
+
+# Example DataFrame with historical data
+# Replace this with your actual DataFrame
+data = pd.DataFrame({
+    'S': [100, 101, 102],  # Example stock prices
+    'sigma': [0.2, 0.21, 0.19],  # Example implied volatilities
+    'r': [0.01, 0.01, 0.01]  # Example risk-free rates
+})
+
+# Set parameters
+T = 1  # Time to maturity (1 year)
+target_delta = 0.10  # Target delta for the option
+option_type = "call"  # Type of the option
+
+# Calculate option premiums and update the DataFrame
+data_with_premiums = calculate_option_premiums(data, T, target_delta, option_type)
+data_with_premiums

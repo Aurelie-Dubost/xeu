@@ -1,0 +1,122 @@
+# First, we will define our DataFrame with the required columns: 'open', 'high', 'low', 'close'.
+# We will then define the functions for calculating each volatility measure and apply them to the DataFrame.
+# Finally, we will print out the DataFrame with the volatility measures.
+import pandas as pd
+import numpy as np
+
+# Defining the volatility measures calculation functions
+def close_to_close_volatility(df, window):
+    log_returns = np.log(df['close'] / df['close'].shift(1))
+    return log_returns.rolling(window).std() * np.sqrt(252)
+
+def parkinson_volatility(df, window):
+    factor = 1 / (4 * np.log(2))
+    hl_ratio = (np.log(df['high'] / df['low']))**2
+    return np.sqrt(hl_ratio.rolling(window).mean() * factor * 252)
+
+def garman_klass_volatility(df, window):
+    factor = 0.5 * np.log(df['high'] / df['low'])**2 - (2 * np.log(2) - 1) * np.log(df['close'] / df['open'])**2
+    return np.sqrt(factor.rolling(window).mean() * 252)
+
+# Generating a DataFrame with simulated open, high, low, close prices
+np.random.seed(0)  # Seed for reproducibility
+prices = {
+    'open': np.random.uniform(low=100, high=200, size=100),
+    'high': np.random.uniform(low=200, high=300, size=100),
+    'low': np.random.uniform(low=80, high=100, size=100),
+    'close': np.random.uniform(low=100, high=200, size=100)
+}
+df = pd.DataFrame(prices)
+
+# Calculating the volatility measures with a rolling window of 10 days
+window_size = 10
+df['Close_to_Close_Volatility'] = close_to_close_volatility(df, window_size)
+df['Parkinson_Volatility'] = parkinson_volatility(df, window_size)
+df['Garman_Klass_Volatility'] = garman_klass_volatility(df, window_size)
+
+# Display the first few rows of the DataFrame
+df.head()
+df.tail()
+
+import matplotlib.pyplot as plt
+
+# Plot settings
+plt.style.use('seaborn-darkgrid')
+palette = plt.get_cmap('Set1')
+
+# Plotting Close-to-Close Volatility
+plt.figure(figsize=(14, 7))
+plt.subplot(3, 1, 1)  # 3 rows, 1 column, 1st subplot
+plt.plot(df['Close_to_Close_Volatility'], color=palette(0), label='Close-to-Close Volatility')
+plt.title('Close-to-Close Volatility Time Series')
+plt.legend()
+
+# Plotting Parkinson Volatility
+plt.subplot(3, 1, 2)  # 3 rows, 1 column, 2nd subplot
+plt.plot(df['Parkinson_Volatility'], color=palette(1), label='Parkinson Volatility')
+plt.title('Parkinson Volatility Time Series')
+plt.legend()
+
+# Plotting Garman-Klass Volatility
+plt.subplot(3, 1, 3)  # 3 rows, 1 column, 3rd subplot
+plt.plot(df['Garman_Klass_Volatility'], color=palette(2), label='Garman-Klass Volatility')
+plt.title('Garman-Klass Volatility Time Series')
+plt.legend()
+
+# Adjust layout
+plt.tight_layout()
+plt.show()
+
+# Plotting all volatility measures together for comparison
+
+plt.figure(figsize=(14, 7))
+plt.plot(df['Close_to_Close_Volatility'], label='Close-to-Close Volatility', color=palette(0))
+plt.plot(df['Parkinson_Volatility'], label='Parkinson Volatility', color=palette(1))
+plt.plot(df['Garman_Klass_Volatility'], label='Garman-Klass Volatility', color=palette(2))
+
+plt.title('Comparison of Volatility Measures')
+plt.xlabel('Time')
+plt.ylabel('Volatility')
+plt.legend()
+plt.show()
+
+# Calculating the volatility measures with a rolling window of 10 days
+window_size = 10
+df['Close_to_Close_Volatility'] = close_to_close_volatility(df, window_size)
+df['Parkinson_Volatility'] = parkinson_volatility(df, window_size)
+df['Garman_Klass_Volatility'] = garman_klass_volatility(df, window_size)
+
+# Plotting time series and histograms
+plt.style.use('seaborn-darkgrid')
+palette = plt.get_cmap('Set1')
+
+# Time Series Plot for each volatility measure
+plt.figure(figsize=(18, 10))
+
+plt.subplot(2, 3, 1)
+plt.plot(df['Close_to_Close_Volatility'], label='Close-to-Close', color=palette(0))
+plt.title('Close-to-Close Volatility')
+
+plt.subplot(2, 3, 2)
+plt.plot(df['Parkinson_Volatility'], label='Parkinson', color=palette(1))
+plt.title('Parkinson Volatility')
+
+plt.subplot(2, 3, 3)
+plt.plot(df['Garman_Klass_Volatility'], label='Garman-Klass', color=palette(2))
+plt.title('Garman-Klass Volatility')
+
+# Histograms for each volatility measure
+plt.subplot(2, 3, 4)
+plt.hist(df['Close_to_Close_Volatility'].dropna(), bins=20, color=palette(0), alpha=0.7)
+plt.title('Histogram of Close-to-Close Volatility')
+
+plt.subplot(2, 3, 5)
+plt.hist(df['Parkinson_Volatility'].dropna(), bins=20, color=palette(1), alpha=0.7)
+plt.title('Histogram of Parkinson Volatility')
+
+plt.subplot(2, 3, 6)
+plt.hist(df['Garman_Klass_Volatility'].dropna(), bins=20, color=palette(2), alpha=0.7)
+plt.title('Histogram of Garman-Klass Volatility')
+
+plt.tight_layout()
+plt.show()

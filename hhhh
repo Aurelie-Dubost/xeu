@@ -3,7 +3,7 @@ def rolling_garman_klass_volatility(data, window_size=30):
     Calculate the rolling Garman-Klass volatility over a specified window.
 
     Parameters:
-    data (DataFrame): A pandas DataFrame with columns 'High', 'Low', 'Open', 'Close', 'Date'.
+    data (DataFrame): A pandas DataFrame with columns 'High', 'Low', 'Open', 'Close'.
                       Each row represents a trading day's prices.
     window_size (int): The size of the rolling window (in days).
 
@@ -17,9 +17,8 @@ def rolling_garman_klass_volatility(data, window_size=30):
 
     # Loop over the DataFrame using the rolling window
     for i in range(window_size, len(data)):
-        window_data = data.iloc[i-window_size:i]
-        # Select only the necessary columns for the Garman-Klass volatility calculation
-        volatility = garman_klass_volatility(window_data[['High', 'Low', 'Open', 'Close']])
+        window_data = data[['High', 'Low', 'Open', 'Close']].iloc[i-window_size:i]
+        volatility = garman_klass_volatility(window_data)
         volatility_series.loc[i, 'Volatility'] = volatility
 
     # Drop rows with NaN values (these are the initial rows where we didn't have enough data for the window)

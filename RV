@@ -18,7 +18,7 @@ def rolling_garman_klass_volatility(data, window_size=30):
     # Loop over the DataFrame using the rolling window
     for i in range(window_size, len(data)):
         window_data = data.iloc[i-window_size:i]
-        volatility = garman_klass_volatility(window_data)
+        volatility = garman_klass_volatility(window_data[['High', 'Low', 'Open', 'Close']])
         volatility_series.loc[i, 'Volatility'] = volatility
 
     # Drop rows with NaN values (these are the initial rows where we didn't have enough data for the window)
@@ -26,17 +26,7 @@ def rolling_garman_klass_volatility(data, window_size=30):
     
     return volatility_series
 
-# Extend the example data to a larger dataset
-np.random.seed(42)  # For reproducible results
-extended_data = pd.DataFrame({
-    'High': np.random.uniform(110, 120, 100),
-    'Low': np.random.uniform(100, 110, 100),
-    'Open': np.random.uniform(100, 120, 100),
-    'Close': np.random.uniform(100, 120, 100),
-    'Date': pd.date_range(start='2023-01-01', periods=100, freq='B')  # Business days
-})
-
-# Calculate the rolling Garman-Klass volatility
+# Recalculating the rolling Garman-Klass volatility
 volatility_time_series = rolling_garman_klass_volatility(extended_data)
 
 # Display the first few rows of the resulting time series

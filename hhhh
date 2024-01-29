@@ -1,16 +1,54 @@
+import numpy as np
+import pandas as pd
+
+def garman_klass_volatility(data):
+    """
+    Calculate the Garman-Klass volatility.
+
+    Parameters:
+    data (DataFrame): A pandas DataFrame with columns 'High', 'Low', 'Open', 'Close'.
+                      Each row represents a trading day's prices.
+
+    Returns:
+    float: The annualized Garman-Klass volatility estimate.
+    """
+    # Constants
+    trading_days = 252  # Assuming 252 trading days in a year
+    minutes_in_trading_day = 390  # Assuming 6.5 trading hours in a day
+
+    # Calculate the log ratios
+    log_hl = np.log(data['High'] / data['Low'])
+    log_co = np.log(data['Close'] / data['Open'])
+
+    # Calculate the squared values
+    rs = 0.5 * log_hl**2 - (2 * np.log(2) - 1) * log_co**2
+
+    # Calculate the sum of squared values
+    rs_sum = rs.sum()
+
+    # Scale the sum to get the variance
+    variance = rs_sum * (trading_days / data.shape[0])
+
+    # Annualize the volatility (square root of variance)
+    volatility = np.sqrt(variance)
+
+    # Adjust for the number of minutes in a trading day
+    volatility *= np.sqrt(minutes_in_trading_day)
+
+    return volatility
+
 def rolling_garman_klass_volatility(data, window_size=30):
     """
     Calculate the rolling Garman-Klass volatility over a specified window.
 
     Parameters:
-    data (DataFrame): A pandas DataFrame with columns 'High', 'Low', 'Open', 'Close'.
+    data (DataFrame): A pandas DataFrame with columns 'High', 'Low', 'Open', 'Close', 'Date'.
                       Each row represents a trading day's prices.
     window_size (int): The size of the rolling window (in days).
 
     Returns:
     DataFrame: A DataFrame with the dates and corresponding rolling Garman-Klass volatility.
     """
-
     # Initialize an empty DataFrame to store the results
     volatility_series = pd.DataFrame(index=data.index, columns=['Date', 'Volatility'])
     volatility_series['Date'] = data['Date']
@@ -26,8 +64,5 @@ def rolling_garman_klass_volatility(data, window_size=30):
     
     return volatility_series
 
-# Recalculating the rolling Garman-Klass volatility
-volatility_time_series = rolling_garman_klass_volatility(extended_data)
-
-# Display the first few rows of the resulting time series
-volatility_time_series.head()
+# Example usage (assuming you have a DataFrame named 'extended_data' with the necessary columns)
+# volatility_time_series = rolling_garman_klass_volatility(extended_data, window_size=20)

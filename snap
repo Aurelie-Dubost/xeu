@@ -1,0 +1,76 @@
+import ipywidgets as widgets
+from IPython.display import display, HTML
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+# Define the width of the graphs and the image
+graph_width_px = 600  # Width of each graph
+image_width_px = 600  # Width of the image
+image_height_px = 100  # Height of the image in pixels
+dpi = 150  # Dots per inch for high-quality plots
+
+# Load and display the image
+image_path = 'red.png'  # Use the actual path to the image
+with open(image_path, "rb") as file:
+    image_value = file.read()
+
+# Create the image widget with adjusted width and height
+image_widget = widgets.Image(value=image_value, format='png', width=image_width_px)
+image_widget.layout.height = f"{image_height_px}px"  # Set the height of the image using CSS
+
+# Create the title widget with adjusted bottom margin
+title_widget = widgets.HTML(value="<h3 style='text-align: left; margin-bottom: 0px;'>Vol Monitor Dashboard</h3>")
+title_widget.layout.margin = '0px 0px -10px 0px'  # Adjust the bottom margin to reduce space
+
+# Load the data and round the DataFrame to one decimal place
+main_titles = ['Volatility', 'Volatility', 'Carry', 'Carry', '3m 25d skew', '3m 25d skew', '3m 25d skew',
+               '12m 25d skew', '12m 25d skew', '12m 25d skew', 'Term structure', 'Term structure']
+sub_titles = ['12m', '3m', '3mRV - 3mIV', '1mRV - 3mIV', 'Skew', 'Down', 'Up', 'Skew', 'Down', 'Up', '12/3m', '3m/1m']
+columns = pd.MultiIndex.from_tuples([(main_titles[i], sub_titles[i]) for i in range(len(main_titles))],
+                                    names=['Metric', 'Term'])
+df = pd.DataFrame(np.random.randn(5, len(columns)), columns=columns).round(1)  # Round to one decimal place
+
+# Create the styled DataFrame with a gradient background and remove the borders
+styled_df = (df.style
+             .background_gradient(axis=1, cmap='RdYlGn', subset=pd.IndexSlice[len(df)-2, :])
+             .set_properties(**{'border': '0px', 'text-align': 'center'})
+             .hide_index()  # Hide the index (rows)
+             .format('{:.1f}'))  # Format the DataFrame to display one decimal place
+
+# Render the styled DataFrame HTML directly to avoid escaping
+df_html = styled_df.to_html()
+
+# Create the output widget for the DataFrame
+df_output = widgets.Output()
+with df_output:
+    display(HTML(df_html))
+
+# Function to create a plot with a size that fits as large as possible without overlapping
+def create_plot(title):
+    fig, ax = plt.subplots(figsize=(graph_width_px / dpi, 3), dpi=dpi)  # Adjust figsize and dpi
+    ax.plot(np.random.rand(50).cumsum())
+    ax.set_title(title)  # Set the title for the subplot
+    plt.close(fig)
+    return fig
+
+# Define titles for each chart
+chart_titles = ['Chart 1', 'Chart 2', 'Chart 3', 'Chart 4', 'Chart 5', 'Chart 6']
+
+# Create output widgets for the graphs
+graph_outputs = [widgets.Output() for _ in range(6)]
+
+# Populate the Output widgets with graphs and titles
+for i, (graph_output, title) in enumerate(zip(graph_outputs, chart_titles)):
+    with graph_output:
+        plt_fig = create_plot(title)
+        display(plt_fig)
+
+# Arrange the graphs in two rows
+rows_of_graphs = [widgets.HBox(graph_outputs[i:i+2]) for i in range(0, 6, 2)]
+
+# Combine all elements into the final layout
+app_layout = widgets.VBox([image_widget, title_widget, df_output] + rows_of_graphs)
+
+# Display the final layout
+display(app_layout)

@@ -1,36 +1,39 @@
-def calculate_straddle_pnl(strike_price, call_premium, put_premium, underlying_price_at_expiration, position='long'):
-    initial_cost = call_premium + put_premium
+# Re-importing necessary libraries after reset
+import pandas as pd
+import numpy as np
+
+# Sample DataFrame creation
+dates = pd.date_range('2023-01-01', periods=6, freq='D')
+data = {
+    'spot': [100, 105, 110, 115, 120, 125],
+    'strike': [110, 110, 110, 110, 110, 110],
+    'position': ['long', 'short', 'not', 'long', 'short', 'not'],
+    'exp_date': ['2023-01-06', '2023-01-06', '2023-01-06', '2023-01-06', '2023-01-06', '2023-01-06']
+}
+df = pd.DataFrame(data, index=dates)
+
+# Adjusting the PnL calculation function to handle DataFrame input
+def calculate_straddle_pnl(row, df):
+    # Find the spot price at expiration date
+    exp_date = pd.to_datetime(row['exp_date'])
+    if exp_date not in df.index:
+        return 0  # If expiration date is not in the DataFrame index, return 0
     
-    if position == 'long':
-        if underlying_price_at_expiration > strike_price:
-            # Call option is in the money
-            value_at_expiration = underlying_price_at_expiration - strike_price
-        elif underlying_price_at_expiration < strike_price:
-            # Put option is in the money
-            value_at_expiration = strike_price - underlying_price_at_expiration
-        else:
-            value_at_expiration = 0
-        pnl = value_at_expiration - initial_cost
-    else:  # Short straddle
-        if underlying_price_at_expiration > strike_price:
-            # Call option is exercised
-            loss_at_expiration = underlying_price_at_expiration - strike_price
-        elif underlying_price_at_expiration < strike_price:
-            # Put option is exercised
-            loss_at_expiration = strike_price - underlying_price_at_expiration
-        else:
-            loss_at_expiration = 0
-        pnl = initial_cost - loss_at_expiration
+    spot_at_expiration = df.loc[exp_date, 'spot']
+    strike_price = row['strike']
+    call_premium = put_premium = 5  # Assuming fixed premiums for simplicity
+    
+    if row['position'] == 'long':
+        pnl = max(spot_at_expiration - strike_price, strike_price - spot_at_expiration) - (call_premium + put_premium)
+    elif row['position'] == 'short':
+        pnl = (call_premium + put_premium) - max(spot_at_expiration - strike_price, strike_price - spot_at_expiration)
+    else:  # 'not' position
+        pnl = 0
     
     return pnl
 
-# Example calculations for both long and short straddle positions
-strike_price = 100
-call_premium = 5
-put_premium = 5
-underlying_price_at_expiration = 110
+# Apply the PnL calculation for each row
+df['pnl'] = df.apply(calculate_straddle_pnl, df=df, axis=1)
+df['cum_pnl'] = df['pnl'].cumsum()
 
-long_pnl = calculate_straddle_pnl(strike_price, call_premium, put_premium, underlying_price_at_expiration, 'long')
-short_pnl = calculate_straddle_pnl(strike_price, call_premium, put_premium, underlying_price_at_expiration, 'short')
-
-(long_pnl, short_pnl)
+df

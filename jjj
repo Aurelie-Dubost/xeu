@@ -1,0 +1,36 @@
+def calculate_straddle_pnl(strike_price, call_premium, put_premium, underlying_price_at_expiration, position='long'):
+    initial_cost = call_premium + put_premium
+    
+    if position == 'long':
+        if underlying_price_at_expiration > strike_price:
+            # Call option is in the money
+            value_at_expiration = underlying_price_at_expiration - strike_price
+        elif underlying_price_at_expiration < strike_price:
+            # Put option is in the money
+            value_at_expiration = strike_price - underlying_price_at_expiration
+        else:
+            value_at_expiration = 0
+        pnl = value_at_expiration - initial_cost
+    else:  # Short straddle
+        if underlying_price_at_expiration > strike_price:
+            # Call option is exercised
+            loss_at_expiration = underlying_price_at_expiration - strike_price
+        elif underlying_price_at_expiration < strike_price:
+            # Put option is exercised
+            loss_at_expiration = strike_price - underlying_price_at_expiration
+        else:
+            loss_at_expiration = 0
+        pnl = initial_cost - loss_at_expiration
+    
+    return pnl
+
+# Example calculations for both long and short straddle positions
+strike_price = 100
+call_premium = 5
+put_premium = 5
+underlying_price_at_expiration = 110
+
+long_pnl = calculate_straddle_pnl(strike_price, call_premium, put_premium, underlying_price_at_expiration, 'long')
+short_pnl = calculate_straddle_pnl(strike_price, call_premium, put_premium, underlying_price_at_expiration, 'short')
+
+(long_pnl, short_pnl)

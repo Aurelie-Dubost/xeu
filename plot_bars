@@ -1,0 +1,50 @@
+# Define the function to create a horizontal bar chart with central zero axis
+def horizontal_bar_chart(data, bar_height=0.4, color=(0, 0, 1), title='Horizontal Bar Chart'):
+    """
+    Generate a horizontal bar chart with negative values extending to the left and positive values to the right.
+    Parameters:
+    - data: A DataFrame with indices as categories and a single column for values.
+    - bar_height: The height of the bars in the chart.
+    - color: The color of the bars, given in RGB format.
+    - title: The title of the chart.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plotting the horizontal bars
+    bars = ax.barh(data.index, data.values, height=bar_height, color=color)
+
+    # Adding data labels
+    for bar in bars:
+        width = bar.get_width()
+        label_y_pos = bar.get_y() + bar.get_height() / 2
+        ax.text(width, label_y_pos, f'{width:.1f}', va='center', ha='right' if width < 0 else 'left')
+
+    # Set the title and labels
+    ax.set_title(title)
+    ax.set_xlabel('Values')
+    ax.set_ylabel('Categories')
+
+    # Hide the top and right spines to clean up the chart
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # Move the remaining spines to the zero position
+    ax.spines['bottom'].set_position(('data', 0))
+    ax.spines['left'].set_position(('data', 0))
+
+    # Set x-axis labels to be horizontal
+    plt.xticks(rotation=0)
+
+    # Adjusting legend position
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.05), shadow=True, ncol=len(data.index), frameon=False)
+
+    plt.tight_layout()
+    plt.show()
+
+# Sample data for demonstration
+categories = ['A', 'B', 'C', 'D', 'E']
+values = [-20, -15, 30, -10, 50]  # Example data with negative and positive values
+data_example = pd.Series(values, index=categories)
+
+# Execute the function with example data to print the graph
+horizontal_bar_chart(data_example, bar_height=0.35, color=(0.1, 0.2, 0.5), title='Sample Horizontal Bar Chart')

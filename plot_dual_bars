@@ -1,0 +1,56 @@
+def optimized_dual_bar_chart_no_line_above_labels(data, bar_width=0.4, colors=((0, 0, 1), (0, 1, 0)), ylabel_primary='Primary Data Percentage', ylabel_secondary='Secondary Data Percentage', title='Optimized Dual Bar Chart', invert_right_y=False):
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    # Calculate unified limits for both axes
+    all_values = np.concatenate([data['Primary'], data['Secondary']])
+    min_val, max_val = min(all_values), max(all_values)
+    if min_val > 0: min_val = 0  # Ensure zero is included
+    if max_val < 0: max_val = 0
+
+    # Adjust limits for symmetry around zero if needed
+    limit = max(abs(min_val), abs(max_val))
+    ax1.set_ylim([-limit, limit])
+    
+    # Plot bars for primary and secondary data
+    indices = np.arange(len(data))
+    ax1.bar(indices - bar_width / 2, data['Primary'], width=bar_width, color=colors[0], label='Primary Data')
+    ax2 = ax1.twinx()
+    ax2.bar(indices + bar_width / 2, data['Secondary'], width=bar_width, color=colors[1], label='Secondary Data')
+
+    # Invert right y-axis if requested
+    if invert_right_y:
+        ax2.set_ylim([limit, -limit])
+    else:
+        ax2.set_ylim([-limit, limit])
+
+    # Set labels and titles
+    ax1.set_ylabel(ylabel_primary)
+    ax2.set_ylabel(ylabel_secondary)
+    ax1.set_title(title)
+    ax1.set_xticks(indices)
+    ax1.set_xticklabels(data.index, rotation=0)
+
+    # Draw a zero line for visual alignment
+    ax1.axhline(y=0, color='black', linestyle='-', linewidth=1)
+    ax2.axhline(y=0, color='black', linestyle='-', linewidth=1)
+
+    # Format y-axis labels as percentages
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:.0f}%'.format(x)))
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:.0f}%'.format(x)))
+
+    # Hide the bottom spine to remove line above the month labels
+    ax1.spines['bottom'].set_visible(False)
+    ax2.spines['bottom'].set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    ax2.spines['left'].set_visible(False)
+
+    # Adjusting legend position
+    fig.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), shadow=True, ncol=2, frameon=False)
+
+    plt.tight_layout()
+    plt.show()
+
+# Execute the function with the final adjustment for no line above month labels
+optimized_dual_bar_chart_no_line_above_labels(data_example, bar_width=0.35, colors=((0.1, 0.2, 0.5), (0.2, 0.5, 0.6)), ylabel_primary='Primary Data Percentage', ylabel_secondary='Secondary Data Percentage', title='Final Dual Bar Chart', invert_right_y=True)

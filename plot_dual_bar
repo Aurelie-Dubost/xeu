@@ -1,0 +1,44 @@
+def optimized_dual_bar_chart_final_adjusted(data, bar_width=0.4, colors=((0, 0, 1), (0, 1, 0)), ylabel_primary='Primary Data Percentage', ylabel_secondary='Secondary Data Percentage', title='Fully Optimized Dual Bar Chart'):
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    indices = range(len(data))  # Numeric indices for bar placement
+
+    # Primary Bars
+    bars_primary = ax1.bar([x - bar_width/2 for x in indices], data['Primary'], width=bar_width, color=colors[0], label='Primary Data')
+    
+    # Secondary Bars
+    ax2 = ax1.twinx()
+    bars_secondary = ax2.bar([x + bar_width/2 for x in indices], data['Secondary'], width=bar_width, color=colors[1], label='Secondary Data')
+
+    # Annotations for Primary Data
+    for idx, (bar, label) in enumerate(zip(bars_primary, data['Annotations_Primary'])):
+        ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), label, ha='center', va='bottom')
+
+    # Annotations for Secondary Data
+    for idx, (bar, label) in enumerate(zip(bars_secondary, data['Annotations_Secondary'])):
+        ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), label, ha='center', va='bottom')
+
+    # Setting chart titles and labels
+    ax1.set_ylabel(ylabel_primary)
+    ax2.set_ylabel(ylabel_secondary)
+    ax1.set_title(title)
+    ax1.set_xticks(indices)
+    ax1.set_xticklabels(data.index, rotation=0)  # Adjusted for horizontal labels
+
+    # Ensure y-axes cross at zero and set labels as percentages
+    ax1.axhline(y=0, color='black', linewidth=0.8)
+    ax2.axhline(y=0, color='black', linewidth=0.8)
+    ax1.set_ylim(min(data['Primary'].min(), data['Secondary'].min()), max(data['Primary'].max(), data['Secondary'].max()))
+    ax2.set_ylim(ax1.get_ylim())
+
+    # Format y-axis labels as percentages
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:.0f}%'.format(x)))
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:.0f}%'.format(x)))
+
+    # Displaying the legend without a box
+    fig.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), shadow=True, ncol=2, frameon=False)
+
+    plt.tight_layout()
+    plt.show()
+
+# Re-run the final adjusted function with all corrections
+optimized_dual_bar_chart_final_adjusted(data_example, bar_width=0.35, colors=((0.1, 0.2, 0.5), (0.2, 0.5, 0.6)), ylabel_primary='Primary Data Percentage', ylabel_secondary='Secondary Data Percentage', title='Fully Optimized Dual Bar Chart')

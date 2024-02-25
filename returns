@@ -1,0 +1,55 @@
+# Correct and simplify the function for calculating returns with all necessary information accurately aligned
+def get_closest_date(df, target_day):
+    result = pd.DataFrame()
+    for year_month, group in df.groupby([df.index.year, df.index.month]):
+        # Attempt to get the row for the target day; if not available, get the last available day before the target day
+        closest_date = group[group.index.day <= target_day].iloc[-1:]
+        if closest_date.empty:
+            # If there's no date before the target day in the month, take the first available date after
+            closest_date = group.iloc[0:1]
+        result = pd.concat([result, closest_date])
+    return result
+    
+def calculate_returns_simplified_and_corrected(df, target_day):
+    """
+    Simplified and corrected function to calculate returns, including the closest day calculation,
+    and align data as per specifications with corrected resampling alias.
+    
+    Parameters:
+    - df: DataFrame indexed by daily time series with a 'Close' column.
+    - target_day: The target day of the month for which to find the closest trading day.
+    
+    Returns:
+    - A DataFrame with columns for end of month date, end of month close, closest date to target day,
+      close on that day, and the calculated return.
+    """
+
+    def get_closest_date(inner_df, inner_target_day):
+        result = pd.DataFrame()
+        for year_month, group in inner_df.groupby([inner_df.index.year, inner_df.index.month]):
+            closest_date = group[group.index.day <= inner_target_day].iloc[-1:]
+            if closest_date.empty:
+                closest_date = group.iloc[0:1]
+            result = pd.concat([result, closest_date])
+        return result
+
+    # Use 'ME' for end-of-month resampling as per the latest pandas guidelines
+    eom_df = df.resample('ME').last()
+    eom_df['End of Month Date'] = eom_df.index
+    eom_df['End of Month Close'] = eom_df['Close']
+    
+    closest_day_df = get_closest_date(df, target_day)
+    closest_day_df['Closest Date'] = closest_day_df.index
+    closest_day_df[f'Closest to {target_day}th Day Close'] = closest_day_df['Close']
+    
+    merged_df = pd.merge_asof(closest_day_df.sort_index(), eom_df.sort_index(), left_index=True, right_index=True, direction='backward', suffixes=('', '_right'))
+    
+    merged_df['Return'] = (merged_df[f'Closest to {target_day}th Day Close'] / merged_df['End of Month Close'] - 1) * 100
+    
+    final_df = merged_df[['End of Month Date', 'End of Month Close', 'Closest Date', f'Closest to {target_day}th Day Close', 'Return']]
+    
+    return final_df
+
+# Re-execute the function with corrected logic
+final_corrected_returns_df = calculate_returns_simplified(df, 25)
+final_corrected_returns_df.head()

@@ -1,0 +1,47 @@
+# Adjust the plot_ts function to format y-axes with different units
+def plot_ts(list_ts, dict_colors, y_axis_left, y_axis_right, time_frame, grid, start_date, end_date, recession_dates=None):
+    fig, ax1 = plt.subplots()
+    
+    # Plot each time series and assign it to the primary y-axis
+    for ts, color in zip(list_ts, dict_colors.values()):
+        ax1.plot(ts.index, ts.values, color=color)
+    
+    # Shade the areas for recessions
+    if recession_dates:
+        for start, end in recession_dates:
+            ax1.axvspan(pd.to_datetime(start), pd.to_datetime(end), color='grey', alpha=0.5)
+    
+    # Set the date format on the x-axis based on time_frame
+    if time_frame == 'mm_yy':
+        ax1.xaxis.set_major_formatter(DateFormatter('%m_%y'))
+    elif time_frame == 'yyyy':
+        ax1.xaxis.set_major_formatter(DateFormatter('%Y'))
+    
+    # Format primary y-axis with '%' and set label
+    ax1.set_ylabel(y_axis_left)
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.0%}'.format(y)))
+    
+    # Set x-axis and grid
+    ax1.set_xlim(pd.to_datetime(start_date), pd.to_datetime(end_date))
+    ax1.grid(grid)
+    
+    # Make x-axis labels horizontal
+    ax1.tick_params(axis='x', rotation=0)
+    
+    # Secondary y-axis (on the right)
+    ax2 = ax1.twinx()
+    secondary_data = np.random.rand(len(date_range)) * 1000  # Example secondary data scaled for $
+    ax2.plot(date_range, secondary_data, color='red')  # Plot secondary data
+    ax2.set_ylabel(y_axis_right, color='red')
+    
+    # Format secondary y-axis with '$' and set label color
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '${:.2f}'.format(y)))
+    ax2.tick_params(axis='y', labelcolor='red')
+    
+    plt.tight_layout()
+    plt.show()
+
+# Call the function with fake data
+plot_ts(list_ts, dict_colors, y_axis_left='GDP Growth Rate (%)', y_axis_right='Currency Value ($)', 
+        time_frame='yyyy', grid=True, start_date='1995-01-01', end_date='2023-01-01', 
+        recession_dates=recession_dates)

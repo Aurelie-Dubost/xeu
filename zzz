@@ -1,0 +1,39 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+# Set random seed for reproducibility
+np.random.seed(0)
+
+# Define sector groups with their corresponding color names
+sector_groups = {
+    'red': ['Automobiles', 'Health Care', 'Industrial Goods & Services'],
+    'navy': ['Banks'],
+    'darkgoldenrod': ['Basic Resources'],
+    'mediumseagreen': ['Chemicals'],
+    'darkgreen': ['Construction & Materials'],
+    'grey': ['Financial Services', 'Insurance'],
+    'brown': ['Food & Beverage'],
+    'gold': ['Media'],
+    'yellow': ['Oil & Gas', 'Utilities'],
+    'blue': ['Technology'],
+    'deepskyblue': ['Telecom']
+}
+
+# Convert named colors to hex, applying the same color to each sector in its group
+color_palette = {sector: mcolors.to_hex(color) for color, sectors in sector_groups.items() for sector in sectors}
+
+# Create a DataFrame with example data
+df = pd.DataFrame({
+    'spot_percentile_rank': np.random.rand(100),  # Random values between 0 and 1
+    'vol_percentile_rank': np.random.rand(100),   # Random values between 0 and 1
+    'text_label': [f'Point {i}' for i in range(100)],  # Unique label for each point
+    'GICS_SECTOR_NAME': np.random.choice(list(color_palette.keys()), 100)  # Random sectors from the color_palette keys
+})
+
+# Map sector names to color codes in the DataFrame
+df['color'] = df['GICS_SECTOR_NAME'].map(color_palette)
+
+# Display the first few rows of the DataFrame to verify the mapping
+print(df.head())

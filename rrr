@@ -1,0 +1,40 @@
+import pandas as pd
+import numpy as np
+
+# Define a function to perform rolling correlation and find the most correlated series
+def perform_rolling_correlation(df, reference_col, window_size):
+    max_correlation = -2  # Start with a value less than the minimum possible correlation (-1)
+    most_correlated_col = None
+
+    # Loop over each column in the DataFrame except the reference column
+    for col in df.columns:
+        if col != reference_col:
+            # Calculate the rolling correlation
+            rolling_corr = df[reference_col].rolling(window=window_size).corr(df[col])
+            # Calculate the mean of the rolling correlation coefficients
+            mean_corr = rolling_corr.mean()
+
+            # Update if the current column has a higher mean correlation
+            if mean_corr > max_correlation:
+                max_correlation = mean_corr
+                most_correlated_col = col
+
+    return most_correlated_col, max_correlation
+
+# Example data (replace this with your actual data loading method)
+data = {
+    'Ref_TS': np.random.normal(0, 1, 100),
+    'TS1': np.random.normal(0, 1, 100),
+    'TS2': np.random.normal(0, 1, 100),
+    'TS3': np.random.normal(0, 1, 100)
+}
+df = pd.DataFrame(data)
+
+# Define the window size
+window_size = 30
+
+# Perform rolling correlation and find the most correlated column
+most_correlated_col, max_correlation = perform_rolling_correlation(df, 'Ref_TS', window_size)
+
+# Output the results
+print(f"The most correlated column with 'Ref_TS' over a rolling window of {window_size} is {most_correlated_col} with an average correlation of {max_correlation:.4f}")

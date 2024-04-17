@@ -1,0 +1,60 @@
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+
+# Function to calculate R-squared for a regression
+def calculate_r_squared(y, X):
+    X = sm.add_constant(X)  # Adds a constant term to the predictor
+    model = sm.OLS(y, X)
+    results = model.fit()
+    return results.rsquared
+
+# Rolling regression function to calculate R-squared values for each window
+def rolling_regression(df, reference_col, window_size):
+    results = pd.DataFrame(index=df.index[window_size-1:])
+    
+    for col in df.columns:
+        if col != reference_col:
+            temp_r_squared = []
+            for start in range(len(df) - window_size + 1):
+                end = start + window_size
+                y = df[reference_col][start:end]
+                X = df[col][start:end]
+                r_squared = calculate_r_squared(y, X)
+                temp_r_squared.append(r_squared)
+            
+            results[col] = pd.Series(temp_r_squared, index=df.index[window_size-1:])
+    
+    return results
+
+# Example data (replace this with your actual data loading method)
+data = {
+    'Ref_TS': np.random.normal(0, 1, 100),
+    'TS1': np.random.normal(0, 1, 100),
+    'TS2': np.random.normal(0, 1, 100),
+    'TS3': np.random.normal(0, 1, 100)
+}
+df = pd.DataFrame(data)
+
+# Define the window size
+window_size = 30
+
+# Perform rolling regression
+results = rolling_regression(df, 'Ref_TS', window_size)
+
+# Calculate the average R-squared for each time series
+average_r_squared = results.mean()
+
+# Find the most correlated time series
+most_correlated_ts = average_r_squared.idxmax()
+
+print(f"The most correlated time series relative to 'Ref_TS' is {most_correlated_ts} with an average R-squared of {average_r_squared[most_correlated_ts]}")
+
+# Plotting the results
+results.plot(figsize=(12, 8))
+plt.title('Rolling R-Squared Values Over Time')
+plt.xlabel('Time')
+plt.ylabel('R-Squared')
+plt.legend(title='Time Series')
+plt.show()

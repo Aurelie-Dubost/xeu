@@ -1,0 +1,53 @@
+import matplotlib.pyplot as plt
+
+# Assuming 'results' is the DataFrame returned from the rolling_regression function
+results.plot(figsize=(10, 6))
+plt.title('Rolling R-Squared Values Over Time')
+plt.xlabel('Index (Time)')
+plt.ylabel('R-Squared')
+plt.legend(title='Time Series')
+plt.show()
+
+import seaborn as sns
+
+plt.figure(figsize=(12, 8))
+sns.heatmap(results, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Heatmap of Rolling R-Squared Values')
+plt.xlabel('Time Series')
+plt.ylabel('Index (Time)')
+plt.show()
+
+# Example to plot the first window
+import statsmodels.api as sm
+import numpy as np
+
+# Assume using the first window for 'TS1'
+start = 0
+window_size = 30
+end = start + window_size
+y = df['Ref_TS'][start:end]
+X = df['TS1'][start:end]
+X = sm.add_constant(X)  # Adds a constant term to the predictor
+model = sm.OLS(y, X)
+results = model.fit()
+
+# Plot
+plt.figure(figsize=(8, 5))
+plt.scatter(X['TS1'], y, color='blue', label='Data Points')
+plt.plot(X['TS1'], results.predict(), color='red', label='Regression Line')
+plt.title('Scatter Plot with Regression Line')
+plt.xlabel('TS1')
+plt.ylabel('Ref_TS')
+plt.legend()
+plt.show()
+
+# Calculate average R-squared values
+avg_r_squared = results.mean()
+
+# Plot
+avg_r_squared.plot(kind='bar', figsize=(10, 6))
+plt.title('Average R-Squared Values for Each Time Series')
+plt.xlabel('Time Series')
+plt.ylabel('Average R-Squared')
+plt.show()
+

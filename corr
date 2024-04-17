@@ -1,0 +1,42 @@
+# Prepare an empty DataFrame to store regression results
+results = pd.DataFrame(columns=['Slope', 'Intercept', 'R_squared'])
+
+# Rolling regression
+for start in range(len(df) - window_size + 1):
+    end = start + window_size
+    y = df['Y'][start:end]
+    X = df['X'][start:end]
+    X = sm.add_constant(X)  # Adds a constant term to the predictor
+    model = sm.OLS(y, X)
+    fitted_model = model.fit()
+    
+    # Collecting results
+    results = results.append({
+        'Slope': fitted_model.params['X'],
+        'Intercept': fitted_model.params['const'],
+        'R_squared': fitted_model.rsquared
+    }, ignore_index=True)
+
+# Display results
+print(results)
+
+import pandas as pd
+import statsmodels.api as sm
+import numpy as np
+
+# Assuming df is your DataFrame and 'Ref_TS' is your reference column
+window_size = 30
+results = pd.DataFrame()
+
+try:
+    for col in df.columns:
+        if col != 'Ref_TS':
+            rolling = df[['Ref_TS', col]].rolling(window=window_size)
+            result = rolling.apply(lambda x: sm.OLS(x[col], sm.add_constant(x['Ref_TS'])).fit().rsquared, raw=False)
+            results[col] = result
+except Exception as e:
+    print(f"An error occurred: {e}")
+
+# Find the time series with the highest average R-squared value
+max_r_squared = results.mean().idxmax()
+print(f"The best performing time series relative to 'Ref_TS' is {max_r_squared}")

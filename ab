@@ -1,0 +1,47 @@
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+
+def calculate_r_squared(y, X):
+    X = sm.add_constant(X)  # Adds a constant term to the predictor
+    model = sm.OLS(y, X)
+    results = model.fit()
+    return results.rsquared
+
+
+def rolling_regression(df, reference_col, window_size):
+    results = pd.DataFrame(index=df.index[window_size-1:])
+    
+    for col in df.columns:
+        if col != reference_col:
+            # Initialize a temporary list to store R-squared values
+            temp_r_squared = []
+            # Loop over each possible window
+            for start in range(len(df) - window_size + 1):
+                end = start + window_size
+                y = df[reference_col][start:end]
+                X = df[col][start:end]
+                r_squared = calculate_r_squared(y, X)
+                temp_r_squared.append(r_squared)
+            
+            # Assign the list of results to the results DataFrame
+            results[col] = pd.Series(temp_r_squared, index=df.index[window_size-1:])
+    
+    return results
+
+# Example data setup
+data = {
+    'Ref_TS': np.random.normal(0, 1, 100),
+    'TS1': np.random.normal(0, 1, 100),
+    'TS2': np.random.normal(0, 1, 100),
+    'TS3': np.random.normal(0, 1, 100)
+}
+df = pd.DataFrame(data)
+
+# Perform rolling regression
+window_size = 30
+results = rolling_regression(df, 'Ref_TS', window_size)
+
+# Find the time series with the highest average R-squared
+best_ts = results.mean().idxmax()
+print(f"The best performing time series relative to 'Ref_TS' is {best_ts} with an average R-squared of {results[best_ts].mean()}")

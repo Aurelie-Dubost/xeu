@@ -1,0 +1,28 @@
+import pandas as pd
+
+# Example time series data
+data = {'Time': ['2021-01-01', '2021-01-02', '2021-01-03', '2021-01-04'],
+        'Value': [200, 300, 100, 400]}
+df = pd.DataFrame(data)
+df['Time'] = pd.to_datetime(df['Time'])
+
+# Function to normalize the 'Value' column
+def normalize_series(dataframe, column_name):
+    """
+    Normalize the specified column of the dataframe between 0 and 1.
+
+    Args:
+    dataframe (pd.DataFrame): Dataframe containing the time series data.
+    column_name (str): Name of the column to normalize.
+
+    Returns:
+    pd.DataFrame: Dataframe with the normalized column added.
+    """
+    min_val = dataframe[column_name].min()
+    max_val = dataframe[column_name].max()
+    dataframe[column_name + '_Norm'] = (dataframe[column_name] - min_val) / (max_val - min_val)
+    return dataframe
+
+# Applying the normalization function to the DataFrame
+normalized_df = normalize_series(df, 'Value')
+print(normalized_df)

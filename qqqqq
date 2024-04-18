@@ -1,0 +1,34 @@
+import matplotlib.pyplot as plt
+
+def plot_graph(x, y):
+    """
+    Plots a basic graph with the given x and y data points.
+
+    Parameters:
+    - x: list of int/float, the x-coordinates of the data points.
+    - y: list of int/float, the y-coordinates of the data points.
+    """
+    plt.figure()
+    plt.plot(x, y)
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+
+def add_title(x, y, title):
+    """
+    Plots the graph using plot_graph function and adds a title.
+
+    Parameters:
+    - x: list of int/float, the x-coordinates of the data points.
+    - y: list of int/float, the y-coordinates of the data points.
+    - title: str, the title to add to the graph.
+    """
+    plot_graph(x, y)  # Call the function to plot the graph
+    plt.title(title)  # Add the title to the graph
+    plt.show()        # Display the graph with the title
+
+# Example data
+x = [1, 2, 3, 4, 5]
+y = [2, 3, 5, 7, 11]
+
+# Call add_title to plot the graph with a title
+add_title(x, y, 'Sample Graph')

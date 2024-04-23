@@ -1,0 +1,43 @@
+import pandas as pd
+
+def calculate_straddle_pnl(row):
+    """
+    Calculate the PnL for either a long or short straddle option strategy based on a DataFrame row.
+
+    Parameters:
+    row (pd.Series): A row from a DataFrame that includes straddle_type, strike_price, premium_call,
+                     premium_put, and stock_price_at_expiration.
+
+    Returns:
+    float: The profit or loss of the specified straddle strategy.
+    """
+    total_premium = row['premium_call'] + row['premium_put']
+
+    if row['straddle_type'] == 'long':
+        if row['stock_price_at_expiration'] > row['strike_price'] + total_premium:
+            pnl = row['stock_price_at_expiration'] - row['strike_price'] - total_premium
+        elif row['stock_price_at_expiration'] < row['strike_price'] - total_premium:
+            pnl = row['strike_price'] - row['stock_price_at_expiration'] - total_premium
+        else:
+            pnl = -total_premium
+    elif row['straddle_type'] == 'short':
+        absolute_difference = abs(row['stock_price_at_expiration'] - row['strike_price'])
+        pnl = total_premium - absolute_difference
+
+    return pnl
+
+# Sample data creation
+data = {
+    'straddle_type': ['long', 'short', 'long', 'short'],
+    'strike_price': [100, 100, 100, 100],
+    'premium_call': [5, 5, 5, 5],
+    'premium_put': [5, 5, 5, 5],
+    'stock_price_at_expiration': [120, 95, 105, 110]
+}
+
+df = pd.DataFrame(data)
+
+# Apply the function to each row and create a new column 'PnL'
+df['PnL'] = df.apply(calculate_straddle_pnl, axis=1)
+
+print(df)

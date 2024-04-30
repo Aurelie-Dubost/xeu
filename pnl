@@ -1,0 +1,27 @@
+import pandas as pd
+
+# Example DataFrame setup
+data = {
+    'spot_at_expiration': [105, 95, 110, 85],
+    'strike_price': [100, 100, 100, 100],
+    'total_premium': [10, 10, 15, 15],
+    'position_type': ['long', 'long', 'short', 'short']
+}
+df = pd.DataFrame(data)
+
+# Define a function to calculate PnL based on position type
+def calculate_pnl(row):
+    if row['position_type'] == 'long':
+        pnl = abs(row['spot_at_expiration'] - row['strike_price']) - row['total_premium']
+    elif row['position_type'] == 'short':
+        pnl = row['total_premium'] - abs(row['spot_at_expiration'] - row['strike_price'])
+    return pnl
+
+# Apply the function to calculate PnL
+df['PnL'] = df.apply(calculate_pnl, axis=1)
+
+# Calculate return percentage
+df['Return %'] = (df['PnL'] / df['total_premium']) * 100
+
+# Display the updated DataFrame
+print(df[['position_type', 'PnL', 'Return %']])

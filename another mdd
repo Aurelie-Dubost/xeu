@@ -1,0 +1,36 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Simulate some cumulative returns for an investment portfolio
+np.random.seed(0)
+dates = pd.date_range(start="2020-01-01", periods=100)
+returns = np.random.normal(0.001, 0.02, size=100)  # Mean daily return of 0.1%, std dev of 2%
+portfolio_values = 1000 * (1 + returns).cumprod()  # Starting with $1000
+
+df = pd.DataFrame({'Date': dates, 'Portfolio Value': portfolio_values})
+
+# Calculate the peak (maximum so far)
+df['Peak'] = df['Portfolio Value'].cummax()
+
+# Calculate drawdown in absolute terms
+df['Drawdown'] = df['Portfolio Value'] - df['Peak']
+
+# Calculate drawdown in percentage terms
+df['Drawdown %'] = (df['Drawdown'] / df['Peak']) * 100
+
+# Plot the results
+plt.figure(figsize=(12, 6))
+plt.plot(df['Date'], df['Portfolio Value'], label='Portfolio Value')
+plt.plot(df['Date'], df['Peak'], label='Peak Value')
+plt.fill_between(df['Date'], df['Portfolio Value'], df['Peak'], color='red', alpha=0.3, label='Drawdown')
+plt.title('Portfolio Value and Drawdowns')
+plt.xlabel('Date')
+plt.ylabel('Value in $')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Display the maximum drawdown in percentage
+max_drawdown_percent = df['Drawdown %'].min()  # This is negative, the most negative is the largest drawdown
+print(f"Maximum Drawdown: {max_drawdown_percent:.2f}%")

@@ -1,0 +1,55 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Simulate data for a straddle strategy
+np.random.seed(0)
+dates = pd.date_range(start='2020-01-01', periods=250)
+spot_prices = np.cumsum(np.random.randn(250) * 5 + 1000)  # Random walk for spot prices
+strike_price = 1000  # Fixed strike price
+total_premium = 50   # Cost of entering the straddle
+
+# DataFrame setup
+df = pd.DataFrame({
+    'Date': dates,
+    'Spot at Expiration': spot_prices,
+    'Strike Price': strike_price,
+    'Total Premium Paid': total_premium
+})
+
+# Calculate PnL for a long straddle
+df['PnL'] = abs(df['Spot at Expiration'] - df['Strike Price']) - df['Total Premium Paid']
+
+# Cumulative PnL and Equity Curve
+df['Cumulative PnL'] = df['PnL'].cumsum()
+df['Equity Curve'] = 1000 + df['Cumulative PnL']  # Starting equity of $1000
+
+# Compute Maximum Drawdown
+df['Peak Equity'] = df['Equity Curve'].cummax()
+df['Drawdown'] = df['Equity Curve'] - df['Peak Equity']
+df['Drawdown %'] = (df['Drawdown'] / df['Peak Equity']) * 100
+
+# Metrics
+sharpe_ratio = df['PnL'].mean() / df['PnL'].std() * np.sqrt(250)  # Annualized Sharpe Ratio
+sortino_ratio = df['PnL'][df['PnL'] > 0].mean() / df['PnL'][df['PnL'] < 0].std() * np.sqrt(250)  # Sortino Ratio focusing on downside
+max_drawdown = df['Drawdown %'].min()  # Maximum Drawdown
+
+# Output Metrics
+print(f"Sharpe Ratio: {sharpe_ratio:.2f}")
+print(f"Sortino Ratio: {sortino_ratio:.2f}")
+print(f"Maximum Drawdown: {max_drawdown:.2f}%")
+
+# Plot Equity Curve and Drawdown
+plt.figure(figsize=(14, 7))
+plt.subplot(2, 1, 1)
+plt.plot(df['Date'], df['Equity Curve'], label='Equity Curve')
+plt.title('Equity Curve of the Straddle Strategy')
+plt.xlabel('Date')
+plt.ylabel('Equity Value')
+
+plt.subplot(2, 1, 2)
+plt.plot(df['Date'], df['Drawdown %'], label='Drawdown %', color='red')
+plt.fill_between(df['Date'], df['Drawdown %'], color='red', alpha=0.3)
+plt.title('Drawdown Percentage')
+plt.xlabel('Date')
+plt.ylabel('Draw

@@ -1,0 +1,54 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Generate synthetic stock data
+np.random.seed(42)
+dates = pd.date_range(start='2020-01-01', periods=100)
+prices = np.cumsum(np.random.randn(100)) + 100  # Simulate stock prices with a random walk
+data = pd.DataFrame(data={'Date': dates, 'Price': prices})
+
+# Simulate trading signals (1 = buy, -1 = sell, 0 = hold)
+np.random.seed(42)
+signals = np.random.choice([-1, 0, 1], size=100)
+data['Signal'] = signals
+data['Shifted Price'] = data['Price'].shift(-1)  # Price at next timestep for exit
+
+# Calculate PnL per position
+data['PnL'] = np.where(data['Signal'] == 1, data['Shifted Price'] - data['Price'], 0)  # Buy position PnL
+data['PnL'] += np.where(data['Signal'] == -1, data['Price'] - data['Shifted Price'], 0)  # Sell position PnL
+
+# Remove NaN values due to shifting
+data.dropna(inplace=True)
+
+# Calculate cumulative PnL
+data['Cumulative PnL'] = data['PnL'].cumsum()
+
+# Calculate maximum drawdown
+roll_max = data['Cumulative PnL'].cummax()
+drawdown = roll_max - data['Cumulative PnL']
+max_drawdown = drawdown.max()
+
+# Plot cumulative PnL and drawdown
+plt.figure(figsize=(14, 7))
+
+plt.subplot(2, 1, 1)
+plt.plot(data['Date'], data['Cumulative PnL'], label='Cumulative PnL')
+plt.title('Cumulative Profit and Loss (PnL)')
+plt.xlabel('Date')
+plt.ylabel('Cumulative PnL')
+plt.legend()
+plt.grid(True)
+
+plt.subplot(2, 1, 2)
+plt.plot(data['Date'], drawdown, label='Drawdown', color='red')
+plt.title('Maximum Drawdown')
+plt.xlabel('Date')
+plt.ylabel('Drawdown')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+max_drawdown

@@ -1,0 +1,33 @@
+import pandas as pd
+import numpy as np
+
+# Define your underlyings and parameters
+udl_list = ['udl1', 'udl2']  # Example underlyings
+params = ['S', 'sigma', 'Fw', 'r']
+
+# Create a MultiIndex and a sample DataFrame with random values
+mi = pd.MultiIndex.from_product([udl_list, params], names=['udl', 'param'])
+df = pd.DataFrame(np.random.rand(len(mi), 1), index=mi, columns=['value'])
+print("Initial DataFrame with MultiIndex:\n", df)
+
+# Function to calculate price
+def calculate_price(data):
+    # Access the values directly by parameter name
+    S = data.loc['S']
+    sigma = data.loc['sigma']
+    Fw = data.loc['Fw']
+    r = data.loc['r']
+    # Example calculation, modify as necessary
+    price = S * sigma - Fw / r  
+    return price
+
+# Create a new DataFrame to store prices
+price_df = pd.DataFrame(index=pd.Index(udl_list, name='udl'), columns=['price'])
+
+# Calculate price for each 'udl'
+for udl in udl_list:
+    # Extract data for each udl at the 'param' level
+    udl_data = df.xs(udl, level='udl')['value']
+    price_df.loc[udl, 'price'] = calculate_price(udl_data)
+
+print("DataFrame with Calculated Prices:\n", price_df)

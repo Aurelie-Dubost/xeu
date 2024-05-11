@@ -2,10 +2,10 @@ import pandas as pd
 
 def create_df_option(udl_list, df_spot, df_vol_3m, df_fwd_3m, fwd_3m_map, mat=3, moneyness_list=[90, 95, 110]):
     dfs = []  # List to store concatenated DataFrames
-
+    
     for udl in udl_list:
-        spot_data = df_spot[df_spot['udl'] == udl]  # Filter spot data by udl
-        fwd_data = df_fwd_3m[df_fwd_3m['udl'] == udl]  # Filter forward data by udl
+        spot_data = df_spot[df_spot['udl'] == udl].set_index('udl')  # Assume 'udl' is a column in df_spot
+        fwd_data = df_fwd_3m[df_fwd_3m['udl'] == udl].set_index('udl')
         vol_data_list = []
 
         for moneyness in moneyness_list:
@@ -13,12 +13,12 @@ def create_df_option(udl_list, df_spot, df_vol_3m, df_fwd_3m, fwd_3m_map, mat=3,
             vol_data['param'] = f'sigma_{moneyness}'  # Add column to indicate moneyness level
             vol_data_list.append(vol_data)
 
-        vol_data = pd.concat(vol_data_list, axis=0)
+        vol_data = pd.concat(vol_data_list)
         vol_data.set_index(['udl', 'param'], inplace=True)  # Set multi-index with udl and moneyness
         
-        rate_data = df_fwd_3m_map.get(udl, pd.DataFrame())  # Get mapping rates data for udl
+        rate_data = df_fwd_3m_map.get(udl, pd.DataFrame()).set_index('udl')
         
-        # Concatenate all data along columns and keep only required columns
+        # Concatenate all data along columns
         df_concat = pd.concat([spot_data, fwd_data, rate_data, vol_data], axis=1)
         
         dfs.append(df_concat)
@@ -26,13 +26,17 @@ def create_df_option(udl_list, df_spot, df_vol_3m, df_fwd_3m, fwd_3m_map, mat=3,
     # Concatenate all dfs along rows
     result = pd.concat(dfs, axis=0)
 
-    # Reset index to just udl and pivot table so 'param' values become column headers
-    result.reset_index(inplace=True)
-    result = result.pivot(index='udl', columns='param', values='sigma')
+    # Create a new DataFrame from result to group by 'udl' and spread 'sigma_' across columns
+    grouped_df = result.groupby('udl').first()  # This assumes that there's only one entry per 'udl' per 'sigma' type
+    # Assuming you want to transform multi-index columns where 'sigma_' values are across different levels
+    grouped_df = grouped_df.unstack(level=1)  # Unstack the 'param' level, which contains 'sigma_90', etc.
     
-    return result
+    return result, grouped_df
 
 # Usage example, you would need to define df_spot, df_vol_3m, df_fwd_3m, and fwd_3m_map before calling this function
 udl_list = ['JP_NKY', 'EU_STOXX50E']
-result_df = create_df_option(udl_list, df_spot, df_vol_3m, df_fwd_3m, fwd_3m_map)
-print(result_df)
+original_df, grouped_df = create_df_option(udl_list, df_spot, df_vol_3m, df_fwd_3m, fwd_3m_map)
+print("Original Multi-Indexed DataFrame:")
+print(original_df)
+print("\nGrouped DataFrame:")
+print(grouped_df)

@@ -1,0 +1,38 @@
+import pandas as pd
+
+def create_df_option(udl_list, df_spot, df_vol_3m, df_fwd_3m, fwd_3m_map, mat=3, moneyness_list=[90, 95, 110]):
+    dfs = []  # List to store concatenated DataFrames
+
+    for udl in udl_list:
+        spot_data = df_spot[df_spot['udl'] == udl]  # Filter spot data by udl
+        fwd_data = df_fwd_3m[df_fwd_3m['udl'] == udl]  # Filter forward data by udl
+        vol_data_list = []
+
+        for moneyness in moneyness_list:
+            vol_data = df_vol_3m[df_vol_3m['udl'] == udl].copy()  # Filter vol data by udl
+            vol_data['param'] = f'sigma_{moneyness}'  # Add column to indicate moneyness level
+            vol_data_list.append(vol_data)
+
+        vol_data = pd.concat(vol_data_list, axis=0)
+        vol_data.set_index(['udl', 'param'], inplace=True)  # Set multi-index with udl and moneyness
+        
+        rate_data = df_fwd_3m_map.get(udl, pd.DataFrame())  # Get mapping rates data for udl
+        
+        # Concatenate all data along columns and keep only required columns
+        df_concat = pd.concat([spot_data, fwd_data, rate_data, vol_data], axis=1)
+        
+        dfs.append(df_concat)
+
+    # Concatenate all dfs along rows
+    result = pd.concat(dfs, axis=0)
+
+    # Reset index to just udl and pivot table so 'param' values become column headers
+    result.reset_index(inplace=True)
+    result = result.pivot(index='udl', columns='param', values='sigma')
+    
+    return result
+
+# Usage example, you would need to define df_spot, df_vol_3m, df_fwd_3m, and fwd_3m_map before calling this function
+udl_list = ['JP_NKY', 'EU_STOXX50E']
+result_df = create_df_option(udl_list, df_spot, df_vol_3m, df_fwd_3m, fwd_3m_map)
+print(result_df)

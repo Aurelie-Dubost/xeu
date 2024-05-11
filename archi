@@ -1,0 +1,48 @@
+import requests
+from bs4 import BeautifulSoup
+import schedule
+import time
+
+def scrape_stock_data():
+    url = "http://example-finance-site.com/markets"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Assume the stock data is contained within <div class="stock-data">
+    stock_data = soup.find_all('div', class_="stock-data")
+    for stock in stock_data:
+        print(stock.text)  # Printing the stock data
+
+# Schedule this task to run daily at 3 PM
+schedule.every().day.at("15:00").do(scrape_stock_data)
+
+while True:
+    schedule.run_pending()
+    time.sleep(60)  # Wait one minute between checks
+
+import sqlite3
+from datetime import datetime, timedelta
+
+conn = sqlite3.connect('stock_data.db')
+c = conn.cursor()
+
+# Create table
+c.execute('''CREATE TABLE IF NOT EXISTS stocks
+             (date text, stock_info text)''')
+
+def cache_or_scrape():
+    # Check if the latest data is less than a day old
+    c.execute("SELECT * FROM stocks ORDER BY date DESC LIMIT 1")
+    latest_entry = c.fetchone()
+    
+    if latest_entry and datetime.strptime(latest_entry[0], '%Y-%m-%d %H:%M:%S') > datetime.now() - timedelta(days=1):
+        print("Using cached data:", latest_entry[1])
+    else:
+        print("Scraping new data...")
+        scrape_stock_data()
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        c.execute("INSERT INTO stocks VALUES (?, ?)", (current_time, "Sample stock data here"))
+        conn.commit()
+
+cache_or_scrape()
+conn.close()

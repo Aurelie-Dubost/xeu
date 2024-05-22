@@ -1,0 +1,33 @@
+import pandas as pd
+import numpy as np
+
+# Create a fake dataframe
+dates = pd.date_range(start="2023-01-01", periods=10, freq='D')
+data = {
+    'HSCEI_110': np.random.rand(10),
+    'HSCEI_105': np.random.rand(10),
+    'HSCEI_102.5': np.random.rand(10),
+    'HSCEI_90': np.random.rand(10),
+    'HSCEI_95': np.random.rand(10),
+    'HSCEI_97.5': np.random.rand(10)
+}
+df = pd.DataFrame(data, index=dates)
+
+# Skew lists
+skew_up_strike = [110, 105, 102.5]
+skew_down_strike = [90, 95, 97.5]
+
+def calculate_skews(df, udl, skew_up_strike, skew_down_strike):
+    for up, down in zip(skew_up_strike, skew_down_strike):
+        up_col = f"{udl}_{up}"
+        down_col = f"{udl}_{down}"
+        skew_col = f"{udl}_skew_{up}-{down}"
+        if up_col in df.columns and down_col in df.columns:
+            df[skew_col] = df[up_col] - df[down_col]
+    return df
+
+# Calculate skews
+udl = 'HSCEI'
+df_with_skews = calculate_skews(df, udl, skew_up_strike, skew_down_strike)
+
+import ace_tools as tools; tools.display_dataframe_to_user(name="Skew DataFrame", dataframe=df_with_skews)

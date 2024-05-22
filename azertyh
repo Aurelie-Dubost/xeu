@@ -1,0 +1,39 @@
+import pandas as pd
+import numpy as np
+
+# Sample data similar to the user's image
+dates = pd.date_range(start="2023-05-17", periods=10, freq='D')
+data = {
+    'EU_STOXX50E_IV_1_97.5': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_1_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_1_102.5': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_1_90': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_1_95': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_1_105': np.random.rand(10) * 10 + 10
+}
+df = pd.DataFrame(data, index=dates)
+
+# Skew lists
+skew_up_strike = [100, 105, 102.5]
+skew_down_strike = [90, 95, 97.5]
+
+def calculate_skews(df, udls, skew_up_strike, skew_down_strike):
+    skew_df = pd.DataFrame(index=df.index)
+    
+    for udl in udls:
+        for up, down in zip(skew_up_strike, skew_down_strike):
+            up_col = f"{udl}_IV_1_{up}"
+            down_col = f"{udl}_IV_1_{down}"
+            skew_col = f"{udl}_skew_{up}-{down}"
+            if up_col in df.columns and down_col in df.columns:
+                skew_df[skew_col] = df[up_col] - df[down_col]
+    
+    return skew_df
+
+# List of underlyings
+udls = ['EU_STOXX50E']
+
+# Calculate skews
+skew_df = calculate_skews(df, udls, skew_up_strike, skew_down_strike)
+
+import ace_tools as tools; tools.display_dataframe_to_user(name="Skew DataFrame", dataframe=skew_df)

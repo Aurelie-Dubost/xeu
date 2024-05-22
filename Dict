@@ -39,3 +39,49 @@ def nested_dict_to_df(nested_dict):
         return df
 
     return construct_df(nested_dict)
+
+
+### 2
+def df_to_nested_dict(df):
+    """
+    Convert a DataFrame to a nested dictionary, preserving the index (assumed to be time series).
+
+    Parameters:
+    - df: DataFrame to convert
+
+    Returns:
+    - Nested dictionary representation of the DataFrame
+    """
+    nested_dict = {}
+    for index, row in df.iterrows():
+        nested_dict[index] = {}
+        for (udl, param), value in row.items():
+            if udl not in nested_dict[index]:
+                nested_dict[index][udl] = {}
+            nested_dict[index][udl][param] = value
+    return nested_dict
+
+def nested_dict_to_df(nested_dict):
+    """
+    Convert a nested dictionary to a DataFrame, preserving the index (assumed to be time series).
+
+    Parameters:
+    - nested_dict: Nested dictionary to convert
+
+    Returns:
+    - DataFrame representation of the nested dictionary
+    """
+    data = []
+    index = []
+
+    for timestamp, udl_dict in nested_dict.items():
+        index.append(timestamp)
+        row = {}
+        for udl, param_dict in udl_dict.items():
+            for param, value in param_dict.items():
+                row[(udl, param)] = value
+        data.append(row)
+
+    df = pd.DataFrame(data, index=index)
+    df.columns = pd.MultiIndex.from_tuples(df.columns, names=['udl', 'param'])
+    return df

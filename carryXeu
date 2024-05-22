@@ -1,0 +1,45 @@
+import pandas as pd
+import numpy as np
+
+# Sample data similar to the user's structure
+dates = pd.date_range(start="2023-05-17", periods=10, freq='D')
+data = {
+    'EU_STOXX50E_IV_1_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_3_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_6_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_12_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_24_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_36_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_1_105': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_3_105': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_6_105': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_12_105': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_24_105': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_36_105': np.random.rand(10) * 10 + 10
+}
+df_vol_moneyness = pd.DataFrame(data, index=dates)
+
+# Carry lists
+date_list_st = [1, 1, 3, 6, 12, 18]
+date_list_lt = [3, 6, 6, 12, 24, 36]
+
+def calculate_carry(df, udls, date_list_st, date_list_lt):
+    carry_df = pd.DataFrame(index=df.index)
+    
+    for udl in udls:
+        for st, lt in zip(date_list_st, date_list_lt):
+            st_col = f"{udl}_IV_{st}_100"
+            lt_col = f"{udl}_IV_{lt}_100"
+            carry_col = f"{udl}_carry_{lt}-{st}"
+            if st_col in df.columns and lt_col in df.columns:
+                carry_df[carry_col] = df[lt_col] - df[st_col]
+    
+    return carry_df
+
+# List of underlyings
+udls = ['EU_STOXX50E']
+
+# Calculate carry
+carry_df = calculate_carry(df_vol_moneyness, udls, date_list_st, date_list_lt)
+
+print(carry_df.head())

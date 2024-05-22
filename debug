@@ -1,0 +1,50 @@
+import pandas as pd
+
+def calculate_carry(df_vol_moneyness, df_rv, udls, date_list_st, date_list_lt, moneyness=100):
+    # Ensure the indices of both dataframes match
+    if not df_vol_moneyness.index.equals(df_rv.index):
+        raise ValueError("Indices of df_vol_moneyness and df_rv do not match.")
+    
+    carry_df = pd.DataFrame(index=df_vol_moneyness.index)
+    
+    for udl in udls:
+        for rv, vol in zip(date_list_st, date_list_lt):
+            rv_col = f"{udl}_RV_{rv}"
+            vol_col = f"{udl}_IV_{vol}_{moneyness}"
+            carry_col = f"{udl}_carry_{moneyness}_{rv}-{vol}"
+            if rv_col in df_rv.columns and vol_col in df_vol_moneyness.columns:
+                carry_df[carry_col] = df_vol_moneyness[vol_col] - df_rv[rv_col]
+    
+    return carry_df
+
+# Sample data
+dates = pd.date_range(start="2023-05-17", periods=10, freq='D')
+data_vol = {
+    'EU_STOXX50E_IV_3_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_6_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_12_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_24_100': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_IV_36_100': np.random.rand(10) * 10 + 10,
+}
+data_rv = {
+    'EU_STOXX50E_RV_1': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_RV_3': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_RV_6': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_RV_12': np.random.rand(10) * 10 + 10,
+    'EU_STOXX50E_RV_24': np.random.rand(10) * 10 + 10,
+}
+
+df_vol_moneyness = pd.DataFrame(data_vol, index=dates)
+df_rv = pd.DataFrame(data_rv, index=dates)
+
+# Carry lists
+date_list_st = [1, 3, 6, 12, 24]
+date_list_lt = [3, 6, 12, 24, 36]
+
+# List of underlyings
+udls = ['EU_STOXX50E']
+
+# Calculate carry
+carry_df = calculate_carry(df_vol_moneyness, df_rv, udls, date_list_st, date_list_lt)
+
+print(carry_df)

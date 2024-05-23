@@ -1,0 +1,90 @@
+import pandas as pd
+
+def nested_dict_to_df(nested_dict):
+    """
+    Convert a nested dictionary to a DataFrame, preserving the index (assumed to be time series).
+
+    Parameters:
+    - nested_dict: Nested dictionary to convert
+
+    Returns:
+    - DataFrame representation of the nested dictionary
+    """
+    data = []
+    index = []
+
+    for timestamp, udl_dict in nested_dict.items():
+        index.append(timestamp)
+        row = {}
+        for udl, param_dict in udl_dict.items():
+            for param, value in param_dict.items():
+                row[(udl, param)] = value
+        data.append(row)
+
+    df = pd.DataFrame(data, index=index)
+    df.columns = pd.MultiIndex.from_tuples(df.columns, names=['udl', 'param'])
+    return df
+
+def create_vol_surface(df, date, udl, moneyness_levels):
+    """
+    Create a volatility surface for a specific underlying and date.
+    
+    Parameters:
+    - df: DataFrame containing the volatility data with multi-index columns
+    - date: The specific date for which to create the surface
+    - udl: The underlying for which to create the surface
+    - moneyness_levels: List of moneyness levels to consider
+    
+    Returns:
+    - vol_surface: DataFrame with maturities as index and moneyness as columns
+    """
+    # Filter the dataframe for the specific date
+    df_date = df.loc[date]
+    
+    # Extract maturities and moneyness values
+    maturities = []
+    moneyness_data = {m: [] for m in moneyness_levels}
+    
+    for (u, param) in df.columns:
+        if u == udl:
+            parts = param.split('_')
+            matu = int(parts[1])
+            mon = float(parts[2])
+            if matu not in maturities:
+                maturities.append(matu)
+            if mon in moneyness_levels:
+                moneyness_data[mon].append(df_date[(u, param)])
+    
+    # Create the volatility surface dataframe
+    vol_surface = pd.DataFrame(moneyness_data, index=maturities)
+    vol_surface.index.name = 'Maturity'
+    vol_surface.columns.name = 'Moneyness'
+    
+    return vol_surface
+
+# Sample nested dictionary
+nested_dict = {
+    '2023-01-01': {
+        'udl1': {'IV_1_100': 1, 'IV_3_100': 4, 'IV_6_100': 7, 'IV_12_100': 10, 'IV_1_105': 13, 'IV_3_105': 16, 'IV_6_105': 19, 'IV_12_105': 22},
+        'udl2': {'IV_1_100': 25, 'IV_3_100': 28, 'IV_6_100': 31, 'IV_12_100': 34, 'IV_1_105': 37, 'IV_3_105': 40, 'IV_6_105': 43, 'IV_12_105': 46}
+    },
+    '2023-01-02': {
+        'udl1': {'IV_1_100': 2, 'IV_3_100': 5, 'IV_6_100': 8, 'IV_12_100': 11, 'IV_1_105': 14, 'IV_3_105': 17, 'IV_6_105': 20, 'IV_12_105': 23},
+        'udl2': {'IV_1_100': 26, 'IV_3_100': 29, 'IV_6_100': 32, 'IV_12_100': 35, 'IV_1_105': 38, 'IV_3_105': 41, 'IV_6_105': 44, 'IV_12_105': 47}
+    },
+    '2023-01-03': {
+        'udl1': {'IV_1_100': 3, 'IV_3_100': 6, 'IV_6_100': 9, 'IV_12_100': 12, 'IV_1_105': 15, 'IV_3_105': 18, 'IV_6_105': 21, 'IV_12_105': 24},
+        'udl2': {'IV_1_100': 27, 'IV_3_100': 30, 'IV_6_100': 33, 'IV_12_100': 36, 'IV_1_105': 39, 'IV_3_105': 42, 'IV_6_105': 45, 'IV_12_105': 48}
+    }
+}
+
+# Convert nested dictionary to DataFrame
+df = nested_dict_to_df(nested_dict)
+
+# List of moneyness levels
+moneyness_levels = [100, 105]
+
+# Create vol surface for a specific date
+vol_surface = create_vol_surface(df, '2023-01-01', 'udl1', moneyness_levels)
+
+print(vol_surface)

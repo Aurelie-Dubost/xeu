@@ -1,0 +1,36 @@
+import ipywidgets as widgets
+from IPython.display import display
+import pandas as pd
+
+# Assuming create_vol_surface is defined somewhere else and returns a DataFrame
+def create_vol_surface(index='EU_STOXX50E', end_date=None):
+    # Your existing logic for creating volatility surface
+    return pd.DataFrame()  # Example DataFrame
+
+# Widget Definitions
+udl_dropdown = widgets.Dropdown(options=['EU_STOXX50E', 'S&P Index', 'Other Index'], value='EU_STOXX50E', description='Udl:')
+end_date_widget = widgets.DatePicker(description='End Date', value=pd.to_datetime('2022-01-01'))
+refresh_button = widgets.Button(description='Refresh')
+progress_bar = widgets.FloatProgress(min=0, max=10, value=5, description='Loading:', bar_style='info', orientation='horizontal')
+output_widget = widgets.Output()
+
+# Function to update the DataFrame output and refresh the display
+def on_refresh_clicked(b):
+    with output_widget:
+        output_widget.clear_output()
+        # Get current values from widgets
+        selected_index = udl_dropdown.value
+        selected_date = end_date_widget.value
+        # Call your function with current widget values
+        df = create_vol_surface(index=selected_index, end_date=selected_date)
+        # Display the new DataFrame
+        display(df)
+
+# Link the button click to the refreshing of the DataFrame
+refresh_button.on_click(on_refresh_clicked)
+
+# Layout the widgets
+app_layout = widgets.VBox([udl_dropdown, end_date_widget, refresh_button, progress_bar, output_widget])
+
+# Display the app layout
+display(app_layout)

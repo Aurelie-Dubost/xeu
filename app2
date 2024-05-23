@@ -1,0 +1,41 @@
+# Assuming create_vol_surface is defined and it takes some time to compute
+def create_vol_surface(index='EU_STOXX50E', end_date=None, progress_callback=None):
+    # Example steps with progress updates
+    for i in range(10):
+        time.sleep(0.5)  # Simulate computation by sleeping
+        if progress_callback:
+            progress_callback(i + 1)  # Update progress
+
+    # Return a dummy DataFrame as an example
+    return pd.DataFrame({'Data': [index] * 10, 'Date': [end_date] * 10})
+
+def update_progress(progress):
+    progress_bar.value = progress  # Update the progress bar value
+
+def compute_and_display():
+    selected_index = udl_dropdown.value
+    selected_date = end_date_widget.value
+    create_vol_surface(index=selected_index, end_date=selected_date, progress_callback=update_progress)
+    with output_widget:
+        output_widget.clear_output()
+        df = create_vol_surface(selected_index, selected_date)
+        display(df)
+
+def on_refresh_clicked(b):
+    # Run the computation in a separate thread to keep UI responsive
+    threading.Thread(target=compute_and_display).start()
+
+# Widget Setup
+udl_dropdown = widgets.Dropdown(options=['EU_STOXX50E', 'S&P Index', 'Other Index'], value='EU_STOXX50E', description='Udl:')
+end_date_widget = widgets.DatePicker(description='End Date', value=pd.to_datetime('2022-01-01'))
+refresh_button = widgets.Button(description='Refresh')
+progress_bar = widgets.FloatProgress(value=0, min=0, max=10, description='Loading:')
+output_widget = widgets.Output()
+
+refresh_button.on_click(on_refresh_clicked)
+
+# Layout the widgets
+app_layout = widgets.VBox([udl_dropdown, end_date_widget, refresh_button, progress_bar, output_widget])
+
+# Display the app layout
+display(app_layout)

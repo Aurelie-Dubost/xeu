@@ -1,0 +1,139 @@
+import pandas as pd
+import numpy as np
+
+def calculate_percent_rank_inc(data, start_date=None, end_date=None):
+    """
+    Calculate PercentRank.INC for each row compared to all previous rows in a Series.
+
+    Parameters:
+    data (pd.Series, pd.DataFrame, dict): Input data. Expected dictionary format: {date: {nested_keys: value}}
+    start_date (str): Optional start date for filtering data.
+    end_date (str): Optional end date for filtering data.
+
+    Returns:
+    pd.Series: Series with PercentRank.INC values.
+    """
+    # Convert input data to a Series
+    if isinstance(data, pd.DataFrame):
+        if data.shape[1] != 1:
+            raise ValueError("DataFrame input should have exactly one column.")
+        series = data.iloc[:, 0]
+    elif isinstance(data, dict):
+        # Flatten the nested dictionary to extract the values
+        flat_data = {pd.to_datetime(date): value for date, nested_dict in data.items() for key, value in nested_dict.items()}
+        series = pd.Series(flat_data)
+    elif isinstance(data, pd.Series):
+        series = data
+    else:
+        raise TypeError("Input data should be a pandas Series, DataFrame, or dictionary.")
+    
+    # Ensure the series has a datetime index
+    if not isinstance(series.index, pd.DatetimeIndex):
+        series.index = pd.to_datetime(series.index)
+    
+    # Filter by date range if specified
+    if start_date or end_date:
+        start_date = pd.to_datetime(start_date) if start_date else series.index.min()
+        end_date = pd.to_datetime(end_date) if end_date else series.index.max()
+        series = series.loc[start_date:end_date]
+    
+    if series.empty:
+        return pd.Series([], index=series.index)
+    
+    # Calculate percentile ranks using Pandas' rank method and normalization
+    ranks = series.rank(method='min').apply(lambda x: (x - 1) / (len(series) - 1))
+    
+    return ranks
+
+def calculate_percentile_rank_surface(nested_dict, udl, date, moneyness_levels, start_date=None, end_date=None):
+    """
+    Calculate the percentile rank surface from a nested dictionary.
+
+    Parameters:
+    nested_dict (dict): Nested dictionary containing the data.
+    udl (str): Underlying identifier.
+    date (str): Target date for which the percentile rank is calculated.
+    moneyness_levels (list): List of moneyness levels to include in the surface.
+    start_date (str): Optional start date for filtering data.
+    end_date (str): Optional end date for filtering data.
+
+    Returns:
+    pd.DataFrame: DataFrame representing the percentile rank surface.
+    """
+    try:
+        date_str = pd.to_datetime(date).strftime('%Y-%m-%d')
+        percentile_rank_surface = pd.DataFrame(index=moneyness_levels, columns=nested_dict[date_str][udl]['IV'].keys())
+
+        for matu in percentile_rank_surface.columns:
+            for mon in moneyness_levels:
+                try:
+                    values = {
+                        pd.to_datetime(past_date): nested_dict[past_date][udl]['IV'][matu][mon]
+                        for past_date in nested_dict
+                        if udl in nested_dict[past_date] and 'IV' in nested_dict[past_date][udl]
+                        and matu in nested_dict[past_date][udl]['IV'] and mon in nested_dict[past_date][udl]['IV'][matu]
+                    }
+                    if values:
+                        values_dict = {date: {matu: value} for date, value in values.items()}
+                        percentile_series = calculate_percent_rank_inc(values_dict, start_date, end_date)
+                        percentile_rank_surface.at[mon, matu] = percentile_series.get(pd.to_datetime(date_str), np.nan)
+                    else:
+                        percentile_rank_surface.at[mon, matu] = np.nan
+                except KeyError:
+                    percentile_rank_surface.at[mon, matu] = np.nan
+
+        return percentile_rank_surface.T
+    except Exception as e:
+        print(f"An error occurred in calculate_percentile_rank_surface: {e}")
+        return pd.DataFrame()
+
+def plot_surface(nested_dict, udl, date, surface_type, start_date=None, end_date=None):
+    try:
+        date = pd.Timestamp(date)
+
+        if surface_type == 'Level':
+            vol_surface = create_vol_surface(nested_dict, date, udl, moneyness_levels)
+            vol_surface = ensure_numerical(vol_surface)  # Ensure numerical format
+            display(style_df(vol_surface, "Volatility Surface"))
+        elif surface_type == 'Percentile':
+            if start_date and end_date:
+                start_date = pd.Timestamp(start_date)
+                end_date = pd.Timestamp(end_date)
+                if start_date > end_date:
+                    print("Start date cannot be after end date.")
+                    return
+                percentile_surface = calculate_percentile_rank_surface(nested_dict, udl, date, moneyness_levels, start_date, end_date)
+                percentile_surface = ensure_numerical(percentile_surface)  # Ensure numerical format
+                title = f"Percentile Surface ({udl}) From: {start_date.strftime('%Y-%m-%d')} to: {end_date.strftime('%Y-%m-%d')}"
+                styled_df = style_df(percentile_surface, title)
+                display(styled_df)
+            else:
+                print("Please select start and end dates for Percentile surface.")
+        else:
+            print("Invalid surface type selected.")
+    except KeyError as e:
+        print(f"KeyError: {e} - Ensure the selected date range is within the data's date range.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+# Example usage
+nested_dict = {
+    '2024-05-20': {'UDL': {'IV': {1: {80: 0, 90: 1}}}},
+    '2024-05-21': {'UDL': {'IV': {1: {80: 0, 90: 1}}}},
+    '2024-05-22': {'UDL': {'IV': {1: {80: -1, 90: 0}}}},
+    '2024-05-23': {'UDL': {'IV': {1: {80: 0, 90: 1}}}},
+    '2024-05-24': {'UDL': {'IV': {1: {80: -10, 90: 0}}}},
+    '2024-05-25': {'UDL': {'IV': {1: {80: 20, 90: 2}}}},
+    '2024-05-26': {'UDL': {'IV': {1: {80: 1, 90: 2}}}},
+    '2024-05-27': {'UDL': {'IV': {1: {80: 2, 90: 3}}}},
+    '2024-05-28': {'UDL': {'IV': {1: {80: 3, 90: 4}}}},
+}
+
+udl = 'UDL'
+date = '2024-05-27'
+moneyness_levels = [80, 90]
+start_date = "2024-05-20"
+end_date = "2024-05-27"
+surface_type = 'Percentile'
+
+plot_surface(nested_dict, udl, date, surface_type, start_date, end_date)

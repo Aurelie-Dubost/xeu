@@ -1,0 +1,33 @@
+import pandas as pd
+
+# Sample data for daily performance
+data = {
+    'CompanyA': [0.01, 0.02, -0.01],
+    'CompanyB': [0.02, -0.01, 0.01],
+    'CompanyC': [-0.01, 0.01, 0.02],
+}
+df = pd.DataFrame(data)
+
+# Sample data for sector weights
+weights_data = {
+    'Sector1': [0.5, 0.3, 0.2],
+    'Sector2': [0.4, 0.4, 0.2],
+    'Sector3': [0.1, 0.3, 0.6],
+}
+weights_df = pd.DataFrame(weights_data, index=['CompanyA', 'CompanyB', 'CompanyC'])
+
+# Function to calculate the daily performance of sectors
+def calculate_daily_performance(performance_df, weights_df):
+    # Ensure the weights are aligned with the companies in performance_df
+    weights_df = weights_df.loc[performance_df.columns]
+    
+    # Calculate daily performance of each sector
+    daily_performance = performance_df.dot(weights_df)
+    
+    return daily_performance
+
+# Calculate the daily performance
+daily_performance = calculate_daily_performance(df, weights_df)
+
+# Display the result
+print(daily_performance)

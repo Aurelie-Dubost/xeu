@@ -1,0 +1,44 @@
+import pandas as pd
+
+# Sample data for daily performance with sector mapping and weights
+data = {
+    'CompanyA': [0.01, 0.02, -0.01],
+    'CompanyB': [0.02, -0.01, 0.01],
+    'CompanyC': [-0.01, 0.01, 0.02],
+}
+performance_df = pd.DataFrame(data)
+
+# Assume this DataFrame also contains sector and weight information
+sector_weight_data = {
+    'Company': ['CompanyA', 'CompanyB', 'CompanyC'],
+    'Sector': ['Sector1', 'Sector2', 'Sector1'],
+    'Weight': [0.6, 0.4, 0.4]
+}
+sector_weight_df = pd.DataFrame(sector_weight_data)
+sector_weight_df.set_index('Company', inplace=True)
+
+# Function to calculate the daily performance of sectors
+def calculate_daily_performance(performance_df, sector_weight_df):
+    # Transpose performance_df to align with sector_weight_df
+    performance_df = performance_df.T
+    
+    # Merge performance_df with sector_weight_df to include sector and weight information
+    performance_df = performance_df.merge(sector_weight_df, left_index=True, right_index=True)
+    
+    # Initialize a DataFrame to hold the sector performance
+    sectors = performance_df['Sector'].unique()
+    sector_performance = pd.DataFrame(index=performance_df.columns[:-2], columns=sectors)
+    
+    # Calculate the weighted daily performance for each sector
+    for sector in sectors:
+        sector_data = performance_df[performance_df['Sector'] == sector]
+        sector_weights = sector_data['Weight']
+        sector_daily_performance = sector_data.drop(columns=['Sector', 'Weight']).T.dot(sector_weights)
+        sector_performance[sector] = sector_daily_performance / sector_weights.sum()
+    
+    return sector_performance
+
+# Calculate the daily performance
+daily_performance = calculate_daily_performance(performance_df, sector_weight_df)
+
+# Display the 

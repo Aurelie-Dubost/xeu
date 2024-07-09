@@ -1,0 +1,36 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+# Create a fake dataframe
+data = {
+    'Category': ['A', 'B', 'C'],
+    'Value1': [10, 20, 30],
+    'Value2': [15, 25, 35],
+    'PointValue': [5, 10, 15]
+}
+
+df = pd.DataFrame(data)
+
+# Plot
+fig, ax = plt.subplots()
+
+# Bar plots for Value1 and Value2
+bar_width = 0.35
+index = np.arange(len(df['Category']))
+
+bar1 = ax.bar(index, df['Value1'], bar_width, label='Value1', color='r')
+bar2 = ax.bar(index, df['Value2'], bar_width, bottom=df['Value1'], label='Value2', color='g')
+
+# Point plot for PointValue
+point = ax.scatter(index, df['PointValue'], color='b', zorder=5)
+
+# Labels and title
+ax.set_xlabel('Category')
+ax.set_ylabel('Values')
+ax.set_title('Stacked Bar Chart with Points')
+ax.set_xticks(index)
+ax.set_xticklabels(df['Category'])
+ax.legend()
+
+plt.show()

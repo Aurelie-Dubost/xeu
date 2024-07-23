@@ -1,0 +1,66 @@
+import pandas as pd
+import numpy as np
+
+def downcast_df(df):
+    """
+    Downcast the numerical columns in the DataFrame to save memory.
+    """
+    float_cols = df.select_dtypes(include=['float']).columns
+    int_cols = df.select_dtypes(include=['int']).columns
+
+    df[float_cols] = df[float_cols].astype(np.float32)
+    df[int_cols] = df[int_cols].astype(np.int32)
+    
+    return df
+
+def compute_weighted_statistics(compo, vol, col_name, start_date=None, end_date=None):
+    """
+    This function computes the weighted average, mean, and median of the vol DataFrame columns,
+    excluding the specified col_name from the calculations but including it in the results.
+    The weights are derived from the compo DataFrame. Calculations are performed within the specified date range.
+    
+    :param compo: DataFrame containing weekly allocation time series for different assets.
+    :param vol: DataFrame containing daily volatility data for different assets.
+    :param col_name: Column name to be excluded from the calculations but included in the results.
+    :param start_date: Start date for the calculation (inclusive).
+    :param end_date: End date for the calculation (inclusive).
+    :return: A DataFrame with weighted average, means, and median for each row, including col_name.
+    """
+    # Efficiently filter data based on the specified date range
+    if start_date:
+        compo = compo.loc[start_date:]
+        vol = vol.loc[start_date:]
+    if end_date:
+        compo = compo.loc[:end_date]
+        vol = vol.loc[:end_date]
+
+    # Downcast dataframes to save memory
+    compo = downcast_df(compo)
+    vol = downcast_df(vol)
+
+    # Align compo with vol by forward filling missing weekly values to daily frequency
+    compo_aligned = compo.reindex(vol.index, method='ffill')
+
+    # Exclude the specified column from calculations
+    compo_excluded = compo_aligned.drop(columns=[col_name])
+    vol_excluded = vol.drop(columns=[col_name])
+
+    # Filter vol to only include rows where compo has non-zero values
+    valid_index = compo_aligned[compo_aligned.sum(axis=1) != 0].index
+    vol_filtered = vol_excluded.loc[valid_index]
+
+    # Calculate the weighted statistics excluding the specified column
+    weighted_avg = (vol_filtered * compo_aligned.loc[valid_index]).sum(axis=1) / compo_aligned.loc[valid_index].sum(axis=1)
+
+    # Calculate mean and median per day
+    mean = vol_filtered.mean(axis=1)
+    median = vol_filtered.median(axis=1)
+
+    # Combine results into a DataFrame
+    results = pd.DataFrame({
+        'mean': mean,
+        'median': median,
+        'weighted_avg': weighted_avg
+    })
+
+    return results

@@ -1,6 +1,7 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Rectangle, Patch
 #pip install pyperclip Pillow
 from io import BytesIO
 from PIL import Image
@@ -108,3 +109,95 @@ def create_bar_chart(df, columns, labels, colors, date_labels, title='SX5E Param
     
     # Display the chart
     plt.show()
+
+
+def create_stats_chart(categories, min_values, max_values, avg_values, last_values, percentile_20, percentile_80, title, add_percentage_sign=False, filename='plot.png'):
+    """
+    Create a custom chart.
+    
+    Parameters:
+    categories (list): List of category names.
+    min_values (list): List of min values for each category.
+    max_values (list): List of max values for each category.
+    avg_values (list): List of average values for each category.
+    last_values (list): List of last values for each category.
+    percentile_20 (list): List of 20th percentile values for each category.
+    percentile_80 (list): List of 80th percentile values for each category.
+    title (str): The title of the chart.
+    add_percentage_sign (bool): Whether to add a percentage sign to the y-axis labels.
+    filename (str): The name of the file to save the plot to.
+    """
+    fig, ax = plt.subplots(figsize=(12, 6))
+    icon_width = 0.3  # Increase width for all icons
+
+    # Plot 20th-80th percentile range as bars
+    for i, category in enumerate(categories):
+        ax.bar(i, percentile_80[i] - percentile_20[i], bottom=percentile_20[i], color='gray', alpha=0.5, edgecolor='none', width=icon_width, label='20th-80th %ile' if i == 0 else "")
+
+    # Plot min/max as horizontal lines
+    for i, category in enumerate(categories):
+        ax.plot([i - icon_width / 2, i + icon_width / 2], [min_values[i], min_values[i]], color='black', linewidth=3, label='Min/Max' if i == 0 else "")
+        ax.plot([i - icon_width / 2, i + icon_width / 2], [max_values[i], max_values[i]], color='black', linewidth=3)
+    
+    # Plot average as triangles
+    for i, category in enumerate(categories):
+        ax.plot(i, avg_values[i], marker='^', color='black', markersize=10, markeredgewidth=1.5, markeredgecolor='black', label='Avg' if i == 0 else "")
+    
+    # Plot last values as diamonds
+    for i, category in enumerate(categories):
+        ax.plot(i, last_values[i], marker='D', color='red', markersize=10, markeredgewidth=1.5, markeredgecolor='black', label='Last' if i == 0 else "")
+
+    # Customization
+    ax.set_xticks(range(len(categories)))
+    ax.set_xticklabels(categories)
+    ax.set_title(title, pad=40)
+    ax.axhline(0, color='black', linewidth=2.0)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.tick_params(axis='x', bottom=False)  # Remove tick marks on the x-axis
+
+    # Format y-axis labels to include percentage sign if the parameter is set to True
+    if add_percentage_sign:
+        ax.set_yticks(np.arange(-1, 6, 1))  # Adjust y-ticks as necessary
+        ax.set_yticklabels([f'{int(tick)}%' for tick in ax.get_yticks()])
+
+    # Define font properties
+    font_properties = {'family': 'sans-serif', 'size': 12}
+
+    # Custom legend
+    legend_elements = [
+        Patch(facecolor='gray', edgecolor='none', alpha=0.5, label='20th-80th %ile'),
+        plt.Line2D([0], [1], color='black', linewidth=3, label='Min/Max'),
+        plt.Line2D([0], [0], marker='^', color='black', label='Avg', markersize=12, linestyle='none'),
+        plt.Line2D([0], [0], marker='D', color='red', label='Last', markersize=12, linestyle='none')
+    ]
+
+    # Adjust the legend position and spacing
+    ax.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=4, frameon=False, handletextpad=2.0, columnspacing=4.0, prop=font_properties)
+
+    # Set axis limits: Add space after the x-axis for % labels
+    ax.set_xlim(-0.5, len(categories) - 0.5)  # Adjust x-axis limit to provide more space
+    
+    # Set axis colors to black and increase width
+    ax.spines['left'].set_color('black')
+    ax.spines['left'].set_linewidth(1.5)
+    ax.spines['bottom'].set_color('black')
+    ax.spines['bottom'].set_linewidth(2.0)  # Increase the width of the x-axis
+    ax.xaxis.label.set_color('black')
+    ax.yaxis.set_ticks_position('left')  # Only ticks on the left side
+    ax.tick_params(axis='x', colors='black', width=1.5, direction='out')
+    ax.tick_params(axis='y', colors='black', width=1.5, direction='out')
+    
+    # Reduce space between categories
+    plt.subplots_adjust(hspace=0.1)
+    
+    # Save the plot to a file with more padding to the right
+    plt.savefig(filename, dpi=300, bbox_inches='tight', pad_inches=0.2)  # Increase DPI and add padding
+    
+    print(f"Plot saved to {filename}")
+    
+    # Display the chart
+    plt.tight_layout()
+    plt.show()
+

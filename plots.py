@@ -110,8 +110,7 @@ def create_bar_chart(df, columns, labels, colors, date_labels, title='SX5E Param
     # Display the chart
     plt.show()
 
-
-def create_stats_chart(categories, min_values, max_values, avg_values, last_values, percentile_20, percentile_80, title, add_percentage_sign=False, filename='plot.png'):
+def create_stats_chart(categories, min_values, max_values, avg_values, last_values, percentile_20, percentile_80, title, colors, add_percentage_sign=False, filename='plot.png'):
     """
     Create a custom chart.
     
@@ -132,20 +131,20 @@ def create_stats_chart(categories, min_values, max_values, avg_values, last_valu
 
     # Plot 20th-80th percentile range as bars
     for i, category in enumerate(categories):
-        ax.bar(i, percentile_80[i] - percentile_20[i], bottom=percentile_20[i], color='gray', alpha=0.5, edgecolor='none', width=icon_width, label='20th-80th %ile' if i == 0 else "")
+        ax.bar(i, percentile_80[i] - percentile_20[i], bottom=percentile_20[i], color=colors['percentile_range'], alpha=0.5, edgecolor='none', width=icon_width, label='20th-80th %ile' if i == 0 else "")
 
     # Plot min/max as horizontal lines
     for i, category in enumerate(categories):
-        ax.plot([i - icon_width / 2, i + icon_width / 2], [min_values[i], min_values[i]], color='black', linewidth=3, label='Min/Max' if i == 0 else "")
-        ax.plot([i - icon_width / 2, i + icon_width / 2], [max_values[i], max_values[i]], color='black', linewidth=3)
+        ax.plot([i - icon_width / 2, i + icon_width / 2], [min_values[i], min_values[i]], color=colors['min_max'], linewidth=3, label='Min/Max' if i == 0 else "")
+        ax.plot([i - icon_width / 2, i + icon_width / 2], [max_values[i], max_values[i]], color=colors['min_max'], linewidth=3)
     
     # Plot average as triangles
     for i, category in enumerate(categories):
-        ax.plot(i, avg_values[i], marker='^', color='black', markersize=10, markeredgewidth=1.5, markeredgecolor='black', label='Avg' if i == 0 else "")
+        ax.plot(i, avg_values[i], marker='^', color=colors['avg'], markersize=10, markeredgewidth=1.5, markeredgecolor='black', label='Avg' if i == 0 else "")
     
     # Plot last values as diamonds
     for i, category in enumerate(categories):
-        ax.plot(i, last_values[i], marker='D', color='red', markersize=10, markeredgewidth=1.5, markeredgecolor='black', label='Last' if i == 0 else "")
+        ax.plot(i, last_values[i], marker='D', color=colors['last'], markersize=10, markeredgewidth=1.5, markeredgecolor='black', label='Last' if i == 0 else "")
 
     # Customization
     ax.set_xticks(range(len(categories)))
@@ -167,10 +166,10 @@ def create_stats_chart(categories, min_values, max_values, avg_values, last_valu
 
     # Custom legend
     legend_elements = [
-        Patch(facecolor='gray', edgecolor='none', alpha=0.5, label='20th-80th %ile'),
-        plt.Line2D([0], [1], color='black', linewidth=3, label='Min/Max'),
-        plt.Line2D([0], [0], marker='^', color='black', label='Avg', markersize=12, linestyle='none'),
-        plt.Line2D([0], [0], marker='D', color='red', label='Last', markersize=12, linestyle='none')
+        Patch(facecolor=colors['percentile_range'], edgecolor=colors['percentile_range'], alpha=0.5, label='20th-80th %ile'),
+        plt.Line2D([0], [1], color=colors['min_max'], linewidth=3, label='Min/Max'),
+        plt.Line2D([0], [0], marker='^', color=colors['avg'], markeredgecolor='black', markeredgewidth=1.5, label='Avg', markersize=12, linestyle='none'),
+        plt.Line2D([0], [0], marker='D', color=colors['last'], markeredgecolor='black', markeredgewidth=1.5, label='Last', markersize=12, linestyle='none')
     ]
 
     # Adjust the legend position and spacing
@@ -201,3 +200,75 @@ def create_stats_chart(categories, min_values, max_values, avg_values, last_valu
     plt.tight_layout()
     plt.show()
 
+def plot_term_structure(df, title='CAC term structure remains flat on the short end', filename='term_structure.png', show_grid=True, colors=None):
+    """
+    Plot the term structure graph.
+    
+    Parameters:
+    df (pd.DataFrame): DataFrame containing the data.
+    title (str): The title of the chart.
+    filename (str): The name of the file to save the plot to.
+    show_grid (bool): Whether to show the grid on the plot.
+    colors (dict): Dictionary of RGB colors for the plot elements.
+    """
+    if colors is None:
+        colors = {
+            '10th_90th': (0.5, 0.5, 0.5),
+            'current': (0.0, 0.5, 0.0),
+            '1w_ago': (1.0, 0.65, 0.0),
+            'peak_stress': (1.0, 0.0, 0.0)
+        }
+
+    tenors = df.columns
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plot 10th/90th percentile range
+    ax.fill_between(tenors, df.loc['10th'], df.loc['90th'], color=colors['10th_90th'], alpha=0.5, label='1Y 10th/90th %-ile')
+
+    # Plot current term structure
+    ax.plot(tenors, df.loc['current'], color=colors['current'], label='CAC Term Structure (Current)', linewidth=2)
+
+    # Plot one week ago
+    ax.plot(tenors, df.loc['1w_ago'], color=colors['1w_ago'], linestyle='--', label='1W ago', linewidth=2)
+
+    # Plot peak stress
+    ax.plot(tenors, df.loc['peak_stress'], color=colors['peak_stress'], label='Peak stress', linewidth=2)
+
+    # Customization
+    ax.set_xlabel('Tenors', fontsize=12, fontweight='bold')
+    ax.set_ylabel('ATM Implied Volatility', fontsize=12, fontweight='bold')
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=70)
+    if show_grid:
+        ax.grid(True)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    # Adjust x and y axis limits
+    ax.set_xlim(tenors[0], tenors[-1])
+    ax.set_ylim(min(df.min()) - 1, max(df.max()) + 1)
+    
+    # Set y-axis labels as percentages
+    y_ticks = ax.get_yticks()
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([f'{int(tick)}%' for tick in y_ticks])
+
+    # Custom legend
+    legend_elements = [
+        plt.Line2D([0], [0], color=colors['10th_90th'], alpha=0.5, linewidth=10, label='1Y 10th/90th %-ile'),
+        plt.Line2D([0], [0], color=colors['current'], linewidth=2, label='CAC Term Structure (Current)'),
+        plt.Line2D([0], [0], color=colors['1w_ago'], linestyle='--', linewidth=2, label='1W ago'),
+        plt.Line2D([0], [0], color=colors['peak_stress'], linewidth=2, label='Peak stress')
+    ]
+    
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=40)
+    ax.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=4, frameon=False, handletextpad=1.0, columnspacing=4.0)
+
+    # Save the plot to a file
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    
+    print(f"Plot saved to {filename}")
+    
+    # Display the chart
+    plt.show()

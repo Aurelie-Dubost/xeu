@@ -1,0 +1,96 @@
+import pandas as pd
+import numpy as np
+
+# Create the sample DataFrame
+data = {
+    'udl': ['EU_STOXX50E'] * 10,
+    'param': ['IV', 'IVFD', 'RV', 'spot', 'IV', 'IVFD', 'RV', 'spot', 'IV', 'IVFD'],
+    'matu': [1.0, 1.0, 21.0, np.nan, 5.0, 5.0, np.nan, np.nan, 1.0, 1.0],
+    'value': [24.48, 23.45, np.nan, 4701.68, 25.18, 24.47, 4600.48, np.nan, 25.84, 25.64],
+    'date': ['2001-01-02', '2001-01-02', '2001-01-02', '2001-01-02', 
+             '2001-01-03', '2001-01-03', '2001-01-03', '2001-01-03',
+             '2001-01-04', '2001-01-04']
+}
+df = pd.DataFrame(data)
+df['date'] = pd.to_datetime(df['date'])
+
+# Function to convert DataFrame to nested dictionary
+def df_to_nested_dict(df):
+    nested_dict = {}
+    for index, row in df.iterrows():
+        date_str = row['date'].strftime('%Y-%m-%d')
+        nested_dict.setdefault(date_str, {}).setdefault(row['udl'], {}).setdefault(row['param'], {})[row['matu']] = row['value']
+    return nested_dict
+
+# Convert DataFrame to nested dictionary
+nested_dict = df_to_nested_dict(df)
+
+# Function to compute vol shifts
+def compute_vols_shifts(nested_dict, udl_list, matu, moneyness_list, before_date, today_date, start_date, end_date):
+    def retrieve_data_from_dict(nested_dict, udl, param, matu, date):
+        try:
+            return nested_dict[date][udl][param][matu]
+        except KeyError:
+            return np.nan
+
+    # Retrieve Fixed strike vol data from dictionary
+    df_vol_fixed_strike_last = pd.DataFrame({udl: retrieve_data_from_dict(nested_dict, udl, 'IVFD', matu, today_date) for udl in udl_list}, index=[0])
+    df_vol_fixed_strike_before = pd.DataFrame({udl: retrieve_data_from_dict(nested_dict, udl, 'IVFD', matu, before_date) for udl in udl_list}, index=[0])
+
+    # Retrieve Vol moneyness data from dictionary
+    df_vol_moneyness_last = pd.DataFrame({udl: retrieve_data_from_dict(nested_dict, udl, 'IV', matu, today_date) for udl in udl_list}, index=[0])
+    df_vol_moneyness_before = pd.DataFrame({udl: retrieve_data_from_dict(nested_dict, udl, 'IV', matu, before_date) for udl in udl_list}, index=[0])
+
+    # Shift
+    shift = df_vol_fixed_strike_last - df_vol_fixed_strike_before
+
+    # Smile
+    smile = df_vol_moneyness_last - df_vol_moneyness_before
+
+    # Net
+    net = shift + smile
+
+    # Concatenate results
+    result = pd.concat([shift, smile, net], axis=1)
+    result.columns = ['shift', 'smile', 'net']
+    result = result.round(1)
+
+    return result
+
+# Parameters for the function
+udl_list = ['EU_STOXX50E']
+matu = 1.0
+moneyness_list = [1.0, 5.0]
+before_date = '2001-01-02'
+today_date = '2001-01-04'
+start_date = '2001-01-01'
+end_date = '2001-01-05'
+
+# Run the compute_vols_shifts function
+result = compute_vols_shifts(nested_dict, udl_list, matu, moneyness_list, before_date, today_date, start_date, end_date)
+
+import ace_tools as tools; tools.display_dataframe_to_user(name="Vol Shifts Result", dataframe=result)
+
+# Display the result
+result
+
+# Convert nested_dict back to DataFrame for display
+
+def nested_dict_to_df(nested_dict):
+    records = []
+    for date, udl_data in nested_dict.items():
+        for udl, params in udl_data.items():
+            for param, matu_data in params.items():
+                for matu, value in matu_data.items():
+                    records.append((date, udl, param, matu, value))
+    df = pd.DataFrame(records, columns=['date', 'udl', 'param', 'matu', 'value'])
+    df['date'] = pd.to_datetime(df['date'])
+    return df
+
+# Convert nested dictionary to DataFrame
+df_from_dict = nested_dict_to_df(nested_dict)
+
+import ace_tools as tools; tools.display_dataframe_to_user(name="Nested Dict as DataFrame", dataframe=df_from_dict)
+
+# Display the DataFrame
+df_from_dict

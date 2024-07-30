@@ -1,0 +1,73 @@
+def extract_time_series_for_all_udl(nested_dict, strike_type, t, matu, param_level=None):
+    """
+    Extracts the time series for a specific strike type, maturity, and moneyness/delta level for all underlyings.
+    Handles cases where moneyness/delta is not specified and RV values directly.
+    
+    Args:
+        nested_dict (dict): The nested dictionary containing the vol-surface data.
+        strike_type (str): The strike type ('IV' or 'RV').
+        t (str): The maturity or time for which to extract the time series.
+        matu (str): The maturity for which to extract the time series.
+        param_level (int or float, optional): The moneyness/delta level for which to extract the time series. Defaults to None.
+    
+    Returns:
+        pd.DataFrame: A DataFrame containing the time series data, with dates as the index and underlyings as columns.
+    """
+    # Initialize a list to store the time series for each underlying and date
+    time_series_data = []
+
+    # Loop through all the dates in the nested dictionary
+    for date_str in nested_dict:
+        date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+        # Loop through all the underlyings in the nested dictionary for the current date
+        for udl in nested_dict[date_str]:
+            # Handle the RV case
+            if strike_type == 'RV':
+                if t in nested_dict[date_str][udl][strike_type]:
+                    value = nested_dict[date_str][udl][strike_type][t]
+                    time_series_data.append([udl, date, value])
+            
+            # Handle the IV case
+            elif strike_type == 'IV':
+                if matu in nested_dict[date_str][udl][strike_type]:
+                    value_dict = nested_dict[date_str][udl][strike_type][matu]
+                    if param_level is None:
+                        value = value_dict
+                    else:
+                        value = value_dict.get(param_level, np.nan)
+                    time_series_data.append([udl, date, value])
+
+    # Create a DataFrame from the collected time series data
+    df = pd.DataFrame(time_series_data, columns=['Underlying', 'Date', 'Value'])
+    df = df.set_index('Date').pivot(columns='Underlying', values='Value')
+    return df
+
+# Example usage:
+nested_dict = {
+    '2024-07-23': {
+        'CH_SMI': {
+            'IV': {
+                'matu': {'param_level': 12.34}
+            },
+            'RV': {
+                't': 10.5
+            }
+        }
+    }
+}
+
+date_str = '2024-07-01'
+strike_type = 'IV'
+t = '21'  # Example maturity
+matu = 'matu'
+
+# Extract the time series for RV for all underlyings, no specific moneyness/delta level
+time_series_df = extract_time_series_for_all_udl(nested_dict, 'RV', t, matu, param_level=None)
+
+# Extract the time series for IV for all underlyings, with a specific moneyness level
+time_series_df_iv = extract_time_series_for_all_udl(nested_dict, 'IV', t, matu, 'param_level')  # Example moneyness level
+
+# Output the DataFrames
+print(time_series_df)
+print(time_series_df_iv)

@@ -1,0 +1,39 @@
+import ipywidgets as widgets
+from IPython.display import display
+
+# Assuming output_scatter_indices is already defined elsewhere in your code
+
+# Change the size of the existing output_scatter_indices
+output_scatter_indices.layout = widgets.Layout(width='70%', height='600px')  # Adjusted height
+
+# Create the layout
+box = widgets.VBox([
+    # Top row with udl_indices_widget, start_date_widget, and end_date_widget
+    widgets.HBox([
+        widgets.VBox([udl_indices_widget], layout=widgets.Layout(width='48%')),  # Top Left
+        widgets.VBox([start_date_widget, end_date_widget], layout=widgets.Layout(width='48%'))  # Top Right
+    ], layout=widgets.Layout(justify_content='space-between', margin='10px')),  # Increased margin
+    
+    widgets.HTML('<br>'),  # Add a blank line for spacing
+    
+    # Call the existing output_scatter_indices
+    output_scatter_indices,  # This references the existing output
+    
+    widgets.HTML('<br>'),  # Add a blank line for spacing
+    
+    # Additional widgets here
+    widgets.HBox([
+        widgets.VBox([udl2_widget], layout=widgets.Layout(width='48%')),  # Left
+        widgets.VBox([udl1_widget], layout=widgets.Layout(width='48%'))   # Right
+    ], layout=widgets.Layout(justify_content='space-between', margin='10px')),  # Increased margin
+    
+    widgets.HTML('<br>'),  # Add a blank line for spacing
+    
+    widgets.HBox([
+        widgets.VBox([output_udl1], layout=widgets.Layout(width='48%')),  # Left
+        widgets.VBox([output_udl2], layout=widgets.Layout(width='48%'))   # Right
+    ], layout=widgets.Layout(justify_content='space-between', margin='10px'))  # Increased margin
+])
+
+# Finally, display the box
+display(box)

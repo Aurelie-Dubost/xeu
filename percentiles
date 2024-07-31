@@ -1,0 +1,84 @@
+import pandas as pd
+
+# Step 1: Define the nested dictionary
+nested_dict = {
+    '2001-01-02': {
+        'EU_STOXX50E': {
+            'IV': {1.0: 24.48},
+            'IVFD': {1.0: 23.45},
+            'RV': {21.0: 21.00},
+            'spot': {None: 4701.68}
+        }
+    },
+    '2001-01-03': {
+        'EU_STOXX50E': {
+            'IV': {5.0: 25.18},
+            'IVFD': {5.0: 24.47},
+            'RV': {21.0: 4600.48},
+            'spot': {None: None}
+        }
+    },
+    '2001-01-04': {
+        'EU_STOXX50E': {
+            'IV': {1.0: 25.84},
+            'IVFD': {1.0: 25.64},
+            'RV': {21.0: 22.50}
+        }
+    }
+}
+
+# Step 2: Convert the nested dictionary to a multi-indexed DataFrame
+def nested_dict_to_multiindex_df(nested_dict):
+    records = []
+    for date, udl_data in nested_dict.items():
+        for udl, params in udl_data.items():
+            for param, matu_data in params.items():
+                for matu, value in matu_data.items():
+                    records.append((date, udl, param, matu, value))
+    df = pd.DataFrame(records, columns=['date', 'udl', 'param', 'matu', 'value'])
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index(['date', 'udl', 'param', 'matu'], inplace=True)
+    df = df.unstack(level=['udl', 'param'])
+    return df
+
+# Convert the nested dictionary back to a multi-indexed DataFrame
+df_from_dict_multiindex = nested_dict_to_multiindex_df(nested_dict)
+
+# Step 3: Define the calculate_stats function
+def calculate_stats(df, start_date, end_date):
+    """
+    Calculates statistical metrics for each ticker in a DataFrame within a given date range.
+    
+    Args:
+    df (pandas.DataFrame): DataFrame indexed by date with ticker symbols as columns.
+    start_date (str): Start date in 'YYYY-MM-DD' format.
+    end_date (str): End date in 'YYYY-MM-DD' format.
+    
+    Returns:
+    pandas.DataFrame: DataFrame with tickers as index and the following columns:
+        'min_values': Minimum value for the ticker within the date range.
+        'max_values': Maximum value for the ticker within the date range.
+        'avg_values': Average value for the ticker within the date range.
+        'last_values': Last value for the ticker within the date range.
+        'percentile_20': 20th percentile value for the ticker within the date range.
+        'percentile_80': 80th percentile value for the ticker within the date range.
+    """
+    df = df.fillna(method='ffill')
+    df_filtered = df.loc[start_date:end_date]
+    stats = pd.DataFrame(index=df_filtered.columns)
+
+    stats['min_values'] = df_filtered.min()
+    stats['max_values'] = df_filtered.max()
+    stats['avg_values'] = df_filtered.mean()
+    stats['last_values'] = df_filtered.iloc[-1]
+    stats['percentile_20'] = df_filtered.quantile(0.20)
+    stats['percentile_80'] = df_filtered.quantile(0.80)
+
+    return stats
+
+# Step 4: Run the function with the multi-indexed DataFrame and print the results
+start_date = '2001-01-01'
+end_date = '2001-01-05'
+
+stats_result = calculate_stats(df_from_dict_multiindex, start_date, end_date)
+print(stats_result)

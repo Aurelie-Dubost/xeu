@@ -1,0 +1,63 @@
+import ipywidgets as widgets
+from IPython.display import display
+import pandas as pd
+
+# Define the nested_dict_to_df and create_stats_chart functions as placeholders
+def nested_dict_to_df(nested_dict):
+    # Convert nested_dict to DataFrame (placeholder implementation)
+    return pd.DataFrame(nested_dict)
+
+def create_stats_chart(df, title, colors, add_percentage_sign=False):
+    # Plotting function (placeholder implementation)
+    print(f"Plotting {title} with data:\n", df.head())
+
+# Base function for plotting
+def plot_stats(indices, start_date, end_date, param):
+    # Common code for preparing the data
+    df_from_dict_multindex = nested_dict_to_df(nested_dict)
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
+    
+    # Select parameter-specific df
+    df = df_from_dict_multindex.xs((param), level=('param', 'matu'), axis=1)
+    df = df.loc[start_date:end_date]
+    
+    # Calculate stats and create the plot
+    if not df.empty:
+        create_stats_chart(df, f'{param} stats', colors, add_percentage_sign=True)
+    else:
+        print("No valid DataFrame returned for plotting.")
+
+# Specific functions for different skews
+def update_skew1_plot(indices, start_date, end_date):
+    plot_stats(indices, start_date, end_date, 'skew1')
+
+def update_skew2_plot(indices, start_date, end_date):
+    plot_stats(indices, start_date, end_date, 'skew2')
+
+# Create the interactive outputs for each plot
+output_skew1_plot = widgets.interactive_output(update_skew1_plot, {'indices': udl_indices_widget, 'start_date': start_date_widget, 'end_date': end_date_widget})
+output_skew2_plot = widgets.interactive_output(update_skew2_plot, {'indices': udl_indices_widget, 'start_date': start_date_widget, 'end_date': end_date_widget})
+
+# Create the Layout for both plots
+box = widgets.VBox([
+    # Top row with udl_indices_widget, start_date_widget, and end_date_widget
+    widgets.HBox([
+        widgets.VBox([udl_indices_widget]), # Top Left
+        
+        # Top Right
+        widgets.VBox([
+            start_date_widget,
+            end_date_widget,
+        ], layout=widgets.Layout(margin='0 5px 0 0')), # Adjust the margin for spacing
+    ], layout=widgets.Layout(justify_content='space-between')),
+
+    # Call the existing output_skew1_plot and output_skew2_plot
+    widgets.HBox([
+        widgets.VBox([output_skew1_plot]), # Left plot
+        widgets.VBox([output_skew2_plot]), # Right plot
+    ], layout=widgets.Layout(margin='0px')), # Set margin to zero for less space
+])
+
+# Display the combined Layout
+display(box)

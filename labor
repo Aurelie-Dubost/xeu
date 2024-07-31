@@ -1,0 +1,57 @@
+import pandas as pd
+
+# Sample nested dictionary based on the provided structure
+nested_dict = {
+    '2001-01-01': {
+        'EU_STOXX50E': {
+            'IV': {1.0: 24.48},
+            'IVFD': {1.0: 23.45},
+            'RV': {21.0: 21.00},
+            'spot': {None: 4701.68}
+        }
+    },
+    '2001-01-02': {
+        'EU_STOXX50E': {
+            'IV': {5.0: 25.18},
+            'IVFD': {5.0: 24.47},
+            'RV': {21.0: 4600.48},
+            'spot': {None: None}
+        }
+    },
+    '2001-01-03': {
+        'EU_STOXX50E': {
+            'IV': {1.0: 25.84},
+            'IVFD': {1.0: 25.64},
+            'RV': {21.0: 22.50}
+        }
+    }
+}
+
+# Function to convert nested dictionary to multi-indexed DataFrame
+def nested_dict_to_df(nested_dict):
+    records = []
+    for date_str, udl_data in nested_dict.items():
+        for udl, param_data in udl_data.items():
+            for param, matu_data in param_data.items():
+                for matu, value in matu_data.items():
+                    records.append((date_str, udl, param, matu, value))
+    
+    df = pd.DataFrame(records, columns=['Date', 'udl', 'param', 'matu', 'value'])
+    df['Date'] = pd.to_datetime(df['Date'])
+    
+    # Pivot the DataFrame to get the desired multi-index structure
+    df_pivoted = df.pivot_table(index='Date', columns=['udl', 'param', 'matu'], values='value')
+    
+    # Create MultiIndex for columns
+    columns = pd.MultiIndex.from_tuples(df_pivoted.columns, names=['udl', 'param', 'matu'])
+    
+    # Apply the MultiIndex to the DataFrame
+    df_pivoted.columns = columns
+    
+    return df_pivoted
+
+# Convert the nested dictionary to a DataFrame
+df_from_dict = nested_dict_to_df(nested_dict)
+
+# Display the DataFrame
+print(df_from_dict)

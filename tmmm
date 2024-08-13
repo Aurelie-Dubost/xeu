@@ -1,0 +1,17 @@
+# Assuming df_vol_chgs_time_series is the DataFrame you obtained from your calculations
+
+# Extract the last available date's data as a DataFrame
+df_vol_chgs = df_vol_chgs_time_series.iloc[-1].unstack(level=1)
+
+# Create a new DataFrame with the specific structure
+result = pd.DataFrame({
+    'Fixed-strike vol chg': df_vol_chgs['df_shift'],
+    'Smile riding vol chg': df_vol_chgs['df_smile'],
+    'Net ATM vol chg': df_vol_chgs['df_atm']
+}, index=df_vol_chgs.index)
+
+# Round the result to 2 decimal places (if needed)
+result = result.round(2)
+
+# Display the result
+print(result)

@@ -1,0 +1,25 @@
+# Assuming df_vol_chgs_time_series is the DataFrame you obtained from your calculations
+
+# Extract the last available date's data correctly
+df_vol_chgs = df_vol_chgs_time_series.iloc[-1]  # This should give us the correct row
+
+# If df_vol_chgs is not a DataFrame/Series, it may be necessary to convert or handle it differently
+if isinstance(df_vol_chgs, pd.Series):
+    df_vol_chgs = df_vol_chgs.unstack(level=-1)
+else:
+    # Ensure it's in the correct format if it's not a Series already
+    df_vol_chgs = pd.DataFrame(df_vol_chgs).T
+    df_vol_chgs = df_vol_chgs.unstack(level=-1)
+
+# Create a new DataFrame with the specific structure
+result = pd.DataFrame({
+    'Fixed-strike vol chg': df_vol_chgs.loc[:, 'df_shift'],
+    'Smile riding vol chg': df_vol_chgs.loc[:, 'df_smile'],
+    'Net ATM vol chg': df_vol_chgs.loc[:, 'df_atm']
+}, index=df_vol_chgs.index)
+
+# Round the result to 2 decimal places (if needed)
+result = result.round(2)
+
+# Display the result
+print(result)

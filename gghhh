@@ -1,0 +1,95 @@
+import pandas as pd
+import numpy as np
+import time
+
+# Dummy function for get_spot - returns random spot prices
+def get_spot(udl_list, start_date, end_date):
+    date_range = pd.date_range(start=start_date, end=end_date)
+    data = {udl: np.random.uniform(100, 200, len(date_range)) for udl in udl_list}
+    return pd.DataFrame(data, index=date_range)
+
+# Dummy function for round_number - rounds to nearest integer
+def round_number(x, rounding_to=1):
+    return int(np.round(x / rounding_to) * rounding_to)
+
+# Dummy function for get_vol_shift_df - returns random shifts
+def get_vol_shift_df(udl_list, matu_list, strikes_dict, start_date, end_date):
+    date_range = pd.date_range(start=start_date, end=end_date)
+    data = {udl: np.random.uniform(-0.05, 0.05, len(date_range)) for udl in udl_list}
+    return pd.DataFrame(data, index=date_range)
+
+def get_vol_move_decomp_time_series(udl_list, matu_list, df_spot, end_date_list, x_days_before):
+    # Initialize a list to collect all results
+    vol_chgs_list = []
+
+    # Step 1: Preload and round spot prices once for all relevant dates
+    start_time = time.time()
+    df_spot = df_spot.applymap(lambda x: round_number(x, rounding_to=1))
+    print(f"Spot prices preloaded and rounded: {time.time() - start_time:.4f} seconds")
+
+    # Step 2: Loop over each end_date in the provided end_date_list
+    for end_date in end_date_list:
+        start_time = time.time()
+        
+        # Calculate the start_date as x days before the end_date
+        start_date = end_date - pd.Timedelta(days=x_days_before)
+        
+        # Step 3: Extract relevant spot prices
+        df_spot_start = df_spot.loc[start_date]
+        df_spot_end = df_spot.loc[end_date]
+        print(f"Extracted spot prices for {end_date.date()}: {time.time() - start_time:.4f} seconds")
+        
+        start_time = time.time()
+        # Step 4: Create strike dictionaries for start and end dates
+        strikes_dict_start = {col: [df_spot_start[col]] for col in udl_list}
+        strikes_dict_end = {col: [df_spot_end[col]] for col in udl_list}
+        print(f"Strike dictionaries created for {end_date.date()}: {time.time() - start_time:.4f} seconds")
+        
+        start_time = time.time()
+        # Step 5: Generate df_shift and df_smile using get_vol_shift_df
+        df_shift = get_vol_shift_df(udl_list, matu_list, strikes_dict_start, start_date, end_date)
+        df_smile = get_vol_shift_df(udl_list, matu_list, strikes_dict_end, start_date, end_date)
+        print(f"Volatility shifts generated for {end_date.date()}: {time.time() - start_time:.4f} seconds")
+        
+        start_time = time.time()
+        # Step 6: Calculate the changes using matrix operations
+        df_shift_chg = df_shift.loc[end_date].values - df_shift.loc[start_date].values
+        df_smile_chg = df_smile.loc[end_date].values - df_smile.loc[start_date].values
+        df_atm_chg = df_shift_chg  # Assuming ATM changes similarly
+        stacked_values = np.hstack([df_shift_chg.flatten(), df_atm_chg.flatten(), df_smile_chg.flatten()])
+        print(f"Changes calculated and stacked for {end_date.date()}: {time.time() - start_time:.4f} seconds")
+        
+        start_time = time.time()
+        # Step 7: Create MultiIndex for the columns
+        arrays = [
+            np.repeat(udl_list, 3),
+            np.tile(['df_shift', 'df_atm', 'df_smile'], len(udl_list))
+        ]
+        columns = pd.MultiIndex.from_arrays(arrays, names=('udl', 'type'))
+        print(f"MultiIndex created for {end_date.date()}: {time.time() - start_time:.4f} seconds")
+        
+        start_time = time.time()
+        # Step 8: Append the data with the current date
+        vol_chgs_list.append(pd.DataFrame([stacked_values], columns=columns, index=[end_date]))
+        print(f"Data appended for {end_date.date()}: {time.time() - start_time:.4f} seconds")
+    
+    # Step 9: Combine all the results into a single DataFrame
+    start_time = time.time()
+    df_vol_chgs_time_series = pd.concat(vol_chgs_list)
+    print(f"Time series DataFrame created: {time.time() - start_time:.4f} seconds")
+
+    return df_vol_chgs_time_series
+
+# Example usage with fake data
+udl_list = ['UDL1', 'UDL2', 'UDL3']
+matu_list = [30, 60, 90]
+end_date_list = pd.date_range(start='2023-01-01', end='2023-01-05', freq='D')
+x_days_before = 30
+
+# Generating fake df_spot data for testing
+df_spot = get_spot(udl_list, '2022-11-01', '2023-01-05')
+
+# Call the function to compute the time series
+df_vol_chgs_time_series = get_vol_move_decomp_time_series(udl_list, matu_list, df_spot, end_date_list, x_days_before)
+
+df_vol_chgs_time_series.head()  # Displaying the first few rows of the output for inspection

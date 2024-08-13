@@ -1,0 +1,15 @@
+# Extract data from the existing DataFrame
+df_vol_chgs = df_vol_chgs_time_series.iloc[-1]  # Assuming you want the last available date
+
+# Create a new DataFrame with the specific structure
+result = pd.DataFrame({
+    'Fixed-strike vol chg': df_vol_chgs.xs('df_shift', level='type', axis=1).values.flatten(),
+    'Smile riding vol chg': df_vol_chgs.xs('df_smile', level='type', axis=1).values.flatten(),
+    'Net ATM vol chg': df_vol_chgs.xs('df_atm', level='type', axis=1).values.flatten()
+}, index=['SX5E', 'CAC', 'SX7E'])
+
+# Round the result to 2 decimal places (if needed)
+result = result.round(2)
+
+# Display the result
+print(result)

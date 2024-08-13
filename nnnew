@@ -1,0 +1,52 @@
+def get_vol_move_decomp(udl_list, matu_list, start_date, end_date):
+    # Get spot prices at start and end dates
+    df_spot_start = get_spot(udl_list, start_date, start_date)
+    df_spot_end = get_spot(udl_list, end_date, end_date)
+    
+    # Round spot prices to the highest integer
+    df_spot_start = df_spot_start.applymap(lambda x: round_number(x, rounding_to=1))
+    df_spot_end = df_spot_end.applymap(lambda x: round_number(x, rounding_to=1))
+    
+    # Create strike dictionaries for start and end dates
+    strikes_dict_start = {col: df_spot_start[col].unique().tolist() for col in udl_list if col in df_spot_start.columns}
+    strikes_dict_end = {col: df_spot_end[col].unique().tolist() for col in udl_list if col in df_spot_end.columns}
+    
+    # Generate df_shift and df_smile using get_vol_shift_df
+    df_shift = get_vol_shift_df(udl_list, matu_list, strikes_dict_start, start_date, end_date)
+    df_smile = get_vol_shift_df(udl_list, matu_list, strikes_dict_end, start_date, end_date)
+    
+    # Extract udl and maturity from column names
+    new_cols = []
+    for col in df_shift.columns:
+        udl = '_'.join(map(str, col)).rsplit('_', 1)[0]
+        matu = '_'.join(map(str, col)).rsplit('_', 1)[-1]
+        new_cols.append((udl, matu))
+    
+    # Update column names to include udl and strike
+    df_shift.columns = pd.MultiIndex.from_tuples(new_cols, names=['udl', 'matu'])
+    df_smile.columns = pd.MultiIndex.from_tuples(new_cols, names=['udl', 'matu'])
+    
+    # Calculate the changes in each column of df_shift, df_smile, and df_atm
+    df_atm = df_shift  # Assuming df_atm is calculated similarly
+    df_shift_chg = df_shift.loc[end_date] - df_shift.loc[start_date]
+    df_smile_chg = df_smile.loc[end_date] - df_smile.loc[start_date]
+    df_atm_chg = df_atm.loc[end_date] - df_atm.loc[start_date]
+    
+    # Create a MultiIndex DataFrame
+    arrays = [
+        np.repeat(df_shift_chg.columns, 3),
+        np.tile(['df_shift', 'df_smile', 'df_atm'], len(df_shift_chg.columns))
+    ]
+    index = pd.MultiIndex.from_arrays(arrays, names=('udl', 'type'))
+    
+    # Concatenate the DataFrames along the 'type' axis
+    df_vol_chgs = pd.DataFrame(
+        np.vstack([df_shift_chg.values, df_smile_chg.values, df_atm_chg.values]).T,
+        columns=index,
+        index=df_shift_chg.index
+    )
+    
+    # Multiply by 100 to get percentage changes
+    df_vol_chgs *= 100
+    
+    return df_shift_chg, df_smile_chg, df_vol_chgs

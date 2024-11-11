@@ -1,0 +1,39 @@
+# Function to create parameter controls for the selected plot type
+def create_plot_controls(plot_type):
+    """Creates parameter controls for a given plot type."""
+    controls = []
+    for param in plot_registry[plot_type]["params"]:
+        if param == "color":
+            widget = widgets.ColorPicker(value=plot_registry[plot_type]["params"][param], description=param)
+        else:
+            widget = widgets.FloatSlider(value=plot_registry[plot_type]["params"][param], min=0.1, max=2.0, step=0.1, description=param)
+        controls.append(widget)
+    return controls
+
+# Function to update the customization window with controls for the selected plot type
+def update_customization_window(plot_type):
+    """Updates the customization window to show only widgets for the selected plot type."""
+    print(f"Updating customization window for plot type: {plot_type}")  # Debug statement
+
+    # Clear customization window and create controls for the new plot type
+    customization_window.children = []  # Clear existing widgets
+    controls = create_plot_controls(plot_type)  # Create new controls for selected plot type
+
+    # Add controls and a save button to the customization window
+    save_button = widgets.Button(description="Save Changes")
+    save_button.on_click(lambda b: print("Save button clicked"))  # Debug for save functionality
+    customization_window.children = controls + [save_button]
+
+# Dropdown for selecting plot type
+plot_type_dropdown = widgets.Dropdown(options=list(plot_registry.keys()), description="Plot Type:")
+
+# Event handler for when the plot type changes
+def on_plot_type_change(change):
+    update_customization_window(change.new)
+
+# Attach the event handler to the dropdown
+plot_type_dropdown.observe(on_plot_type_change, names="value")
+
+# Initial setup: Display the plot type dropdown and customization window
+display(plot_type_dropdown)
+update_customization_window(plot_type_dropdown.value)

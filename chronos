@@ -1,0 +1,111 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+import matplotlib.dates as mdates
+from datetime import datetime, timedelta
+from matplotlib.patches import FancyBboxPatch
+import matplotlib.patches as mpatches
+from matplotlib.dates import DateFormatter
+
+# Updated function to keep y-positions constant for all events
+def plot_chronology(event_df, colorpalette):
+    # Generate x-axis limits to ensure enough room for the first and last boxes
+    start_date = event_df['date'].min() - timedelta(days=60)  # Extend start date by 60 days before the first event
+    end_date = event_df['date'].max() + timedelta(days=60)    # Extend end date by 60 days after the last event
+
+    # Plot the timeline with events at actual dates
+    fig, ax = plt.subplots(figsize=(15, 8))  # Increase height for better space for labels
+    ax.plot([start_date, end_date], [0, 0], color='gray', linewidth=1.5, zorder=1)  # Timeline base
+
+    # Set x-axis limits based on extended timeline dates
+    ax.set_xlim(start_date, end_date)
+
+    # Set x-axis ticks explicitly at the start of each year (2017, 2018, 2019)
+    year_ticks = pd.date_range(start='2017-01-01', end='2019-12-31', freq='YS')
+    ax.set_xticks(year_ticks)
+    ax.set_xticklabels([year.strftime('%Y') for year in year_ticks], rotation=0, ha='center', fontsize=14, color='black')  # Removed bold weight
+
+    # Force x-axis formatter to display years properly
+    ax.xaxis.set_major_formatter(DateFormatter('%Y'))
+
+    # Add tick markers for the years
+    ax.tick_params(axis='x', which='major', length=10, width=2, direction='out', color='black', labelsize=14, pad=10)
+
+    # Enable grid for easier visualization
+    ax.grid(True, which='major', axis='x', linestyle='--', alpha=0.5)
+
+    # Remove y-axis ticks and labels completely
+    ax.yaxis.set_visible(False)
+
+    # Set y-positions for alternating placement, keeping them constant for all events
+    positive_y = 2.5  # Constant positive y position for events above the x-axis
+    negative_y = -2.5  # Constant negative y position for events below the x-axis
+
+    for i, row in event_df.iterrows():
+        date, event, event_type = row['date'], row['event'], row['event_type']
+
+        # Select color based on event type
+        if event_type == "announcement":
+            color = colorpalette['aqua']  # Use aqua for announcements
+        elif event_type == "implementation":
+            color = colorpalette['green']  # Use green for implementations
+        else:
+            color = colorpalette['orange']  # Default color if type not found
+
+        # Set y position to alternate above and below the x-axis, but keep constant values
+        y = positive_y if i % 2 == 0 else negative_y
+
+        # Plot connector line from x-axis to the event box
+        ax.plot([date, date], [0, y], color="gray", linewidth=1, linestyle="--", zorder=2)
+
+        # Add text to get bounding box size
+        text_obj = ax.text(mdates.date2num(date), y, event, ha='center', va='center', fontsize=6, color="black", zorder=4)
+
+        # Draw figure to get the text bounding box
+        fig.canvas.draw()
+        bbox = text_obj.get_window_extent(renderer=fig.canvas.get_renderer())
+        bbox_data = bbox.transformed(ax.transData.inverted())
+
+        # Calculate box width and height based on bounding box with extra padding
+        box_width = bbox_data.width + 0.2  # Add more padding to make sure text fits comfortably
+        box_height = bbox_data.height + 0.2  # Add more padding for better vertical spacing
+
+        # Remove original text for re-placement within the box
+        text_obj.remove()
+
+        # Rectangular box fitted to text content
+        box = FancyBboxPatch(
+            (mdates.date2num(date) - box_width / 2, y - (0.5 * box_height)),
+            box_width, box_height,
+            boxstyle="round,pad=0.3", edgecolor=color, facecolor=color, zorder=3
+        )
+        ax.add_patch(box)
+
+        # Add text again within each box, centered vertically and horizontally
+        ax.text(mdates.date2num(date), y, event, ha='center', va='center', fontsize=6, color="black", zorder=4)
+
+        # Position date label just outside the box
+        date_y_pos = y + 0.5 + box_height if y > 0 else y - 0.5 - box_height
+        ax.text(date, date_y_pos, date.strftime('%b %d, %Y'), ha='center', va='center', fontsize=6, color="black", zorder=4)
+
+    # Custom legend and title without bounding boxes
+    announcement_patch = mpatches.Patch(color=colorpalette['aqua'], label="Announcement")
+    implementation_patch = mpatches.Patch(color=colorpalette['green'], label="Implementation")
+    plt.legend(handles=[announcement_patch, implementation_patch], loc="upper center", bbox_to_anchor=(0.5, 1.05), ncol=2, frameon=False)
+
+    # Update title and adjust spacing to reduce the gap between the title and the legend
+    plt.suptitle("Chronology of Trump's Tariff Announcements and Implementations on Europe (2017-2019)", y=1.02, fontsize=12)
+
+    # Final adjustments: Remove specific spines to eliminate borders on three sides
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_linewidth(1.5)  # Keep bottom spine with regular width for emphasis
+
+    # Adjust vertical limits to give more space above the x-axis
+    ax.set_ylim(-4, 4)  # Keep enough space for alternating event boxes
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.3)  # Adjust space at the bottom for x-axis labels to ensure they are always visible
+    plt.show()
+
+# Example usage: assuming event_df and colorpalette are defined
+plot_chronology(event_df, colorpalette)

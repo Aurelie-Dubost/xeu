@@ -1,0 +1,153 @@
+import pickle
+import pandas as pd
+from datetime import datetime
+
+def clean_pickle_data(file_path, save_path=None):
+    """
+    Loads a nested dictionary from a pickle file, fills missing values, and saves it back.
+
+    - Converts non-numeric values to NaN.
+    - Forward-fills missing values across time.
+    - Ensures all numerical data is cleaned.
+
+    Args:
+        file_path (str): Path to the input pickle file.
+        save_path (str, optional): Path to save the cleaned pickle file.
+
+    Returns:
+        dict: The cleaned nested dictionary.
+    """
+    try:
+        # Load pickle file
+        with open(file_path, "rb") as f:
+            nested_dict = pickle.load(f)
+
+        print("Pickle file loaded successfully.")
+
+        # Sort dates for consistent time-series processing
+        sorted_dates = sorted(nested_dict.keys(), key=lambda x: datetime.strptime(x, "%Y-%m-%d"))
+
+        prev_values = {}  # Store previous known values for forward-filling
+
+        for date in sorted_dates:
+            for udl, params in nested_dict[date].items():
+                for param, matu_dict in params.items():
+                    for matu, strike_dict in matu_dict.items():
+                        for strike, value in strike_dict.items():
+                            try:
+                                value = pd.to_numeric(value, errors="coerce")  # Convert to float or NaN
+                            except ValueError:
+                                value = None  # Ensure unconvertible values become None
+
+                            if pd.isna(value):  # If value is missing
+                                if (udl, param, matu, strike) in prev_values:
+                                    nested_dict[date][udl][param][matu][strike] = prev_values[(udl, param, matu, strike)]
+                            else:
+                                prev_values[(udl, param, matu, strike)] = value  # Store for future fills
+
+        print("Missing values successfully filled.")
+
+        # Save cleaned dictionary
+        if save_path:
+            with open(save_path, "wb") as f:
+                pickle.dump(nested_dict, f)
+            print(f"Cleaned data saved to {save_path}")
+
+        return nested_dict
+
+    except Exception as e:
+        print(f"Error processing pickle data: {e}")
+        return None
+
+file_path = "vol_surface_raw.pkl"
+cleaned_pickle_path = "vol_surface_clean.pkl"
+
+cleaned_data = clean_pickle_data(file_path, save_path=cleaned_pickle_path)
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+def extract_vol_surface(nested_dict, date, udl, moneyness_levels, delta_levels, strike_type="Moneyness"):
+    """
+    Extracts a volatility surface from a cleaned nested dictionary.
+
+    - Retrieves structured numerical data.
+    - Converts it to a DataFrame for plotting.
+
+    Args:
+        nested_dict (dict): The cleaned dataset.
+        date (str or datetime): The date for the surface.
+        udl (str): The underlying asset.
+        moneyness_levels (list): List of moneyness levels.
+        delta_levels (list): List of delta levels.
+        strike_type (str): 'Moneyness' or 'Delta' (default is 'Moneyness').
+
+    Returns:
+        pd.DataFrame: The structured volatility surface.
+    """
+    date_str = date.strftime("%Y-%m-%d") if isinstance(date, datetime) else date
+
+    if date_str not in nested_dict or udl not in nested_dict[date_str]:
+        raise ValueError(f"No data found for {date_str} and {udl}.")
+
+    # Map strike type
+    translation_dict = {"Moneyness": "IV", "Delta": "IVD"}
+    translated_strike_type = translation_dict.get(strike_type, strike_type)
+
+    # Extract maturity levels
+    vol_surface_dict = nested_dict[date_str][udl].get(translated_strike_type, {})
+
+    maturities = sorted(vol_surface_dict.keys())
+    strikes = moneyness_levels if strike_type == "Moneyness" else delta_levels
+
+    # Convert to NumPy array
+    vol_data = np.array([
+        [vol_surface_dict[matu].get(strike, np.nan) for strike in strikes]
+        for matu in maturities
+    ], dtype=np.float64)
+
+    # Convert to DataFrame
+    df_vol_surface = pd.DataFrame(vol_data, index=maturities, columns=strikes)
+
+    return df_vol_surface
+
+def plot_vol_surface(vol_surface_df, udl, strike_type):
+    """
+    Plots a volatility surface.
+
+    Args:
+        vol_surface_df (pd.DataFrame): The structured volatility surface.
+        udl (str): Underlying asset.
+        strike_type (str): 'Moneyness' or 'Delta' (used for axis labels).
+    """
+    plt.figure(figsize=(10, 6))
+    plt.imshow(vol_surface_df, aspect='auto', cmap='viridis', origin='lower')
+
+    plt.colorbar(label="Implied Volatility (%)")
+    plt.xlabel(f"{strike_type} Levels")
+    plt.ylabel("Maturity (Days)")
+    plt.title(f"Volatility Surface for {udl}")
+
+    plt.xticks(ticks=range(len(vol_surface_df.columns)), labels=vol_surface_df.columns)
+    plt.yticks(ticks=range(len(vol_surface_df.index)), labels=vol_surface_df.index)
+
+    plt.show()
+
+# Load cleaned pickle
+with open(cleaned_pickle_path, "rb") as f:
+    cleaned_data = pickle.load(f)
+
+# Extract vol surface
+date = "2025-02-01"
+udl = "AAPL"
+moneyness_levels = [80, 90, 100, 110, 120]
+delta_levels = [10, 25, 50, 75, 90]
+strike_type = "Moneyness"
+
+vol_surface_df = extract_vol_surface(cleaned_data, date, udl, moneyness_levels, delta_levels, strike_type)
+
+# Plot the surface
+plot_vol_surface(vol_surface_df, udl, strike_type)
+

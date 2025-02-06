@@ -1,0 +1,65 @@
+import pandas as pd
+from datetime import datetime
+
+def create_vol_surface(nested_dict, date, udl, moneyness_levels, delta_levels, strike_type="Moneyness", transpose=False):
+    """
+    Extracts a volatility surface from a nested dictionary for a specific date and asset.
+
+    Ensures:
+    - Missing values are forward-filled.
+    - Clean structured data with multi-index.
+
+    Args:
+        nested_dict (dict): The main dataset stored as a nested dictionary.
+        date (str or datetime): The date for which the vol surface is extracted.
+        udl (str): The underlying asset.
+        moneyness_levels (list): List of moneyness levels.
+        delta_levels (list): List of delta levels.
+        strike_type (str): 'Moneyness' or 'Delta' (default is 'Moneyness').
+        transpose (bool): Whether to transpose the DataFrame.
+
+    Returns:
+        pd.DataFrame: Cleaned and structured volatility surface.
+    """
+    print("Entering create_vol_surface function...")
+
+    print(f"Processing date: {date}, UDL: {udl}, Moneyness Levels: {moneyness_levels}, Delta Levels: {delta_levels}, Strike Type: {strike_type}, Transpose: {transpose}")
+
+    # Define translation dictionary for strike types
+    translation_dict = {"Moneyness": "IV", "Delta": "IVD"}
+    
+    # Use translated strike type if provided
+    translated_strike_type = translation_dict.get(strike_type, strike_type)
+
+    # Convert date to string format
+    date_str = date.strftime("%Y-%m-%d") if isinstance(date, datetime) else date
+
+    # Ensure date exists in dataset
+    if date_str not in nested_dict:
+        raise ValueError(f"Date {date_str} not found in data.")
+
+    # Extract relevant vol surface data
+    vol_surface = pd.DataFrame(index=moneyness_levels if translated_strike_type == "IV" else delta_levels)
+
+    try:
+        for matu, strikes_data in nested_dict[date_str][udl][translated_strike_type].items():
+            vol_surface[matu] = [strikes_data.get(level, None) for level in vol_surface.index]
+
+        # Ensure numeric values and fill missing values forward
+        vol_surface = vol_surface.apply(pd.to_numeric, errors='coerce')
+        vol_surface.ffill(inplace=True)
+
+        # Drop any remaining NaNs (last resort, should not happen)
+        vol_surface.dropna(inplace=True)
+
+        # Round results for consistency
+        vol_surface = vol_surface.round(2)
+
+        if transpose:
+            vol_surface = vol_surface.T  # Transpose if needed
+
+        return vol_surface
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None

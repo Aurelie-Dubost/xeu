@@ -1,0 +1,67 @@
+import pickle
+import pandas as pd
+
+def load_and_clean_pickle(file_path):
+    """
+    Load a nested dictionary from a pickle file, convert it to a DataFrame,
+    fill missing values (forward fill), and ensure no NaNs remain.
+
+    Args:
+        file_path (str): Path to the pickle file.
+
+    Returns:
+        pd.DataFrame: A cleaned DataFrame with no missing values.
+    """
+    try:
+        # Load pickle file
+        with open(file_path, "rb") as f:
+            nested_dict = pickle.load(f)
+
+        print("Pickle file loaded successfully.")
+
+        # Convert nested dictionary to DataFrame
+        df = nested_dict_to_df(nested_dict)
+
+        # **Check for NaN values before filling**
+        nan_count_before = df.isnull().sum().sum()
+        print(f"Total NaN values before filling: {nan_count_before}")
+
+        # **Apply forward fill to ensure all missing values are handled**
+        df.ffill(inplace=True)
+
+        # **Verify if NaNs still exist**
+        nan_count_after = df.isnull().sum().sum()
+        print(f"Total NaN values after filling: {nan_count_after}")
+
+        if nan_count_after > 0:
+            print("Warning: Some NaNs still remain after forward filling!")
+
+        return df
+
+    except Exception as e:
+        print(f"Error loading pickle file: {e}")
+        return pd.DataFrame()
+
+def nested_dict_to_df(nested_dict):
+    """
+    Convert a nested dictionary to a Pandas DataFrame.
+    
+    Args:
+        nested_dict (dict): The nested dictionary loaded from pickle.
+    
+    Returns:
+        pd.DataFrame: Multi-indexed DataFrame.
+    """
+    data = []
+    for date, inner_dict in nested_dict.items():
+        for udl, params in inner_dict.items():
+            for param, matu_dict in params.items():
+                for matu, values in matu_dict.items():
+                    for strike, value in values.items():
+                        data.append([date, udl, param, matu, strike, value])
+
+    df = pd.DataFrame(data, columns=["Date", "UDL", "Param", "Matu", "Strike", "Value"])
+    df["Date"] = pd.to_datetime(df["Date"])
+    df.set_index(["Date", "UDL", "Param", "Matu", "Strike"], inplace=True)
+
+    return df

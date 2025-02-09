@@ -1,0 +1,84 @@
+import numpy as np
+import pandas as pd
+from scipy.stats import percentileofscore
+
+def get_closest_past_date(nested_dict, udl, translated_strike_type, current_date):
+    """
+    Finds the closest past date in the nested dictionary when current_date is missing.
+    """
+    available_dates = sorted(nested_dict.keys())  # Sort all available dates
+    past_dates = [d for d in available_dates if d < current_date]  # Get only past dates
+
+    # Return the most recent past date if available
+    return past_dates[-1] if past_dates else None
+
+def calculate_percentile_rank_surface(nested_dict, udl, date, moneyness_levels, delta_levels, strike_type="Moneyness", transpose=False):
+    """
+    Calculate percentile rank surfaces while handling missing data by backfilling from previous dates.
+    """
+    # Define translation dictionary for strike types
+    translation_dict = {"Moneyness": "IV", "Delta": "IVTD"}
+    
+    # Get translated strike type
+    translated_strike_type = translation_dict.get(strike_type, strike_type)
+
+    try:
+        # Ensure date is in string format
+        date_str = date if isinstance(date, str) else date.strftime("%Y-%m-%d")
+        
+        # Determine parameter levels based on strike type
+        if translated_strike_type == "IV":
+            param_levels = moneyness_levels
+        elif translated_strike_type == "IVTD":
+            param_levels = delta_levels
+        else:
+            print("Invalid vol type selected.")
+            return None
+        
+        # Initialize dataframe
+        percentile_rank_surface = pd.DataFrame(index=param_levels, columns=nested_dict.get(date_str, {}).get(udl, {}).get(translated_strike_type, {}).keys())
+
+        for param in param_levels:
+            for matu in percentile_rank_surface.columns:
+                # Check if all required keys exist before accessing deeply nested data
+                if (
+                    date_str in nested_dict and
+                    udl in nested_dict[date_str] and
+                    translated_strike_type in nested_dict[date_str][udl] and
+                    matu in nested_dict[date_str][udl][translated_strike_type] and
+                    param in nested_dict[date_str][udl][translated_strike_type][matu]
+                ):
+                    values = np.array(list(nested_dict[date_str][udl][translated_strike_type][matu].values()))
+                    
+                    if len(values) > 0:  # Ensure we have values before calculating percentiles
+                        current_value = nested_dict[date_str][udl][translated_strike_type][matu][param]
+                        percentile = percentileofscore(values, current_value, kind="mean")
+                        percentile_rank_surface.at[param, matu] = percentile
+                    else:
+                        percentile_rank_surface.at[param, matu] = np.nan
+                else:
+                    # If data is missing, try backfilling from the closest past date
+                    past_date = get_closest_past_date(nested_dict, udl, translated_strike_type, date_str)
+                    
+                    if past_date:
+                        try:
+                            past_values = np.array(list(nested_dict[past_date][udl][translated_strike_type][matu].values()))
+                            if len(past_values) > 0:
+                                past_value = nested_dict[past_date][udl][translated_strike_type][matu][param]
+                                percentile = percentileofscore(past_values, past_value, kind="mean")
+                                percentile_rank_surface.at[param, matu] = percentile
+                            else:
+                                percentile_rank_surface.at[param, matu] = np.nan
+                        except KeyError:
+                            percentile_rank_surface.at[param, matu] = np.nan
+                    else:
+                        percentile_rank_surface.at[param, matu] = np.nan  # No past data available
+
+    except KeyError as e:
+        print(f"KeyError encountered: {e}")
+        percentile_rank_surface.loc[:, :] = np.nan  # Fill everything with NaN if a major failure occurs
+
+    except Exception as e:
+        print(f"An error occurred in calculate_percentile_rank_surface: {e}")
+    
+    return percentile_rank_surface

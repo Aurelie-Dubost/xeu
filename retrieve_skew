@@ -1,0 +1,80 @@
+def retrieve_skew_data(nested_dict, indices, start_date, end_date, param, matu, downstrike=90, upstrike=110, midstrike=100, operation="difference"):
+    """
+    Retrieve skew data from a nested dictionary, applying backfill for missing data.
+
+    Parameters:
+    - nested_dict: Dict with hierarchical structure (date -> UDL -> parameters).
+    - indices: List of underlying assets.
+    - start_date: Start date for retrieval.
+    - end_date: End date for retrieval.
+    - param: Parameter to extract ("IV", "TVTD").
+    - matu: Maturity level.
+    - downstrike, upstrike, midstrike: Strike levels for skew calculation.
+    - operation: Defines the skew calculation type ("difference" or "ratio").
+
+    Returns:
+    - df_results: DataFrame with the retrieved and processed skew data.
+    """
+
+    # Define translation dictionary for parameters
+    translation_dict = {"Moneyness": "IV", "Delta": "TVTD"}
+
+    # Use translated parameter if provided
+    translated_param = translation_dict.get(param, param)
+
+    # Convert start and end dates
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
+
+    # Initialize results dictionary
+    results = {}
+
+    # Apply backfill to ensure missing data is handled **before** retrieving data
+    filled_data = backfill_missing_data(nested_dict, indices, translated_param, direction="backward")
+
+    # Check if filled data exists
+    if filled_data is None or filled_data.empty:
+        print("No available data after backfill.")
+        return None
+
+    # Step through the nested dictionary
+    for date_str, udl_data in nested_dict.items():  # First Level is date
+        date = pd.to_datetime(date_str)
+
+        if start_date <= date <= end_date:  # Check if the date is within the specified range
+            for udl in indices:  # Check if UDL is one of the specified indices
+                if udl in udl_data:
+                    for p, maturity_data in udl_data[udl].items():  # Iterate through parameters
+                        if p == translated_param:  # Match the translated parameter
+                            for mat, strike_data in maturity_data.items():  # The maturity level
+                                if mat == matu:  # Filter maturities
+                                    strike_values = {}
+
+                                    # Extract strike values if they exist
+                                    for strike_key, strike_value in strike_data.items():  # Iterate over strikes
+                                        if strike_key in [downstrike, upstrike, midstrike]:  # Check if strike matches
+                                            strike_values[strike_key] = strike_value
+
+                                    # Ensure necessary strikes exist before computation
+                                    if downstrike in strike_values and upstrike in strike_values and midstrike in strike_values:
+                                        if operation == "difference":
+                                            computed_value = (strike_values[upstrike] - strike_values[downstrike]) / strike_values[midstrike]
+                                        elif operation == "ratio":
+                                            computed_value = (strike_values[upstrike] / strike_values[downstrike]) - 1
+                                        else:
+                                            print(f"Invalid operation: {operation}")
+                                            continue  # Skip invalid operation
+
+                                        # Store the computed value
+                                        results.setdefault(date, {})[udl] = computed_value
+
+    # Convert results to DataFrame
+    df_results = pd.DataFrame.from_dict(results, orient="index")
+    df_results.index.name = "Date"
+
+    # Ensure final DataFrame matches structure of original output
+    if df_results.empty:
+        print("Warning: No valid skew data retrieved.")
+        return None
+
+    return df_results

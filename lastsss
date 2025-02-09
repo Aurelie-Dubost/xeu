@@ -1,0 +1,94 @@
+def retrieve_level_data(nested_dict, udl_list, start_date, end_date, param="IV", matu=1, strike=100):
+    """
+    Retrieves processed data from a nested dictionary, integrating backfilling.
+
+    Parameters:
+    - nested_dict: Dictionary {date -> UDL -> parameters}
+    - udl_list: List of underlying assets
+    - start_date: Start date
+    - end_date: End date
+    - param: Parameter to extract ("IV", "TVTD")
+    - matu: Maturity level
+    - strike: Strike price level
+
+    Returns:
+    - DataFrame with indexed retrieved data.
+    """
+    # Ensure udl_list is always a Python list
+    if isinstance(udl_list, np.ndarray):
+        udl_list = udl_list.tolist()
+    elif not isinstance(udl_list, list):
+        raise TypeError("Error: `udl_list` should be a list, but received type:", type(udl_list))
+
+    translation_dict = {"Moneyness": "IV", "Delta": "TVTD"}
+    translated_param = translation_dict.get(param, param)
+
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
+
+    # Apply backfilling before retrieving data
+    filled_data = backfill_missing_data(nested_dict, udl_list, translated_param, direction="backward")
+
+    if filled_data is None:
+        print("No available data after backfilling.")
+        return pd.DataFrame()
+
+    results = {date: {} for date in pd.date_range(start_date, end_date)}
+
+    for date_str, udl_data in filled_data.items():
+        date = pd.to_datetime(date_str)
+        if start_date <= date <= end_date:
+            for udl in udl_list:  # Ensure iteration over UDL list
+                if udl in udl_data and translated_param in udl_data[udl]:  
+                    param_data = udl_data[udl][translated_param]
+                    if matu in param_data and strike in param_data[matu]:  
+                        results[date][udl] = param_data[matu][strike]
+
+    result_df = pd.DataFrame.from_dict(results, orient="index")
+    result_df.index.name = "Date"
+
+    return result_df
+
+def backfill_missing_data(nested_dict, udl_list, translated_strike_type, direction="backward"):
+    """
+    Backfills missing data using either the most recent past data ('backward') 
+    or the next available future data ('forward').
+
+    Parameters:
+    - nested_dict: Hierarchical dictionary {date -> UDL -> parameters}
+    - udl_list: List of underlyings to consider
+    - translated_strike_type: The parameter to extract (e.g., "IV", "TVTD")
+    - direction: 'backward' (fill with past values) or 'forward' (fill with future values)
+
+    Returns:
+    - DataFrame with backfilled data
+    """
+    if udl_list is None:
+        raise ValueError("Error: `udl_list` is None. Ensure it is passed correctly.")
+
+    # Convert to a standard Python list if it's an ndarray
+    if isinstance(udl_list, np.ndarray):
+        udl_list = udl_list.tolist()
+    elif not isinstance(udl_list, list):
+        raise TypeError("Error: `udl_list` should be a list, but received type:", type(udl_list))
+
+    all_dates = sorted(nested_dict.keys())  
+    if not all_dates:
+        print("No available dates in nested_dict.")
+        return None
+
+    data_dict = {}
+
+    for date in all_dates:
+        if date not in nested_dict:
+            continue
+
+        for udl in udl_list:  # Ensure `udl_list` is properly iterated
+            if udl in nested_dict[date] and translated_strike_type in nested_dict[date][udl]:
+                for matu, param_dict in nested_dict[date][udl][translated_strike_type].items():
+                    for param, value in param_dict.items():
+                        data_dict.setdefault((param, matu), {})[date] = value
+
+    if not data_dict:
+        print("No data available for backfilling.")
+        return None

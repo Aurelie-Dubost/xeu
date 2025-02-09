@@ -1,0 +1,30 @@
+# Ensure df is a DataFrame
+if isinstance(df, pd.Series):
+    df = df.to_frame()
+
+# Debugging output
+print(f"df columns: {df.columns}, df shape: {df.shape}, df type: {type(df)}")
+
+# Ensure at least one column exists
+if df.empty or len(df.columns) == 0:
+    print("Error: DataFrame has no columns! Generating placeholder data.")
+    df = pd.DataFrame({"index": np.arange(10), "random_y": np.random.randn(10)})
+    x_col, y_col = "index", "random_y"
+
+elif len(df.columns) == 1:
+    print("Warning: Only one column available. Plotting against index.")
+    df["index"] = df.index  # Create an index column
+    x_col, y_col = "index", df.columns[0]  # Use index as x-axis
+
+else:
+    x_col, y_col = df.columns[0], df.columns[1]  # Use first two columns
+
+# Confirm `x_col` and `y_col` are assigned
+print(f"Using x_col: {x_col}, y_col: {y_col}")
+
+# Now x_col and y_col are guaranteed to exist before using them
+fig = plot_scatter_with_trendline(df, x_col, y_col, title="Scatter Plot", color="Green")
+
+# Save the plot if fig is generated
+if fig is not None:
+    fig.savefig("scatter_skew_plot.png", bbox_inches="tight")

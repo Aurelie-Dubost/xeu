@@ -1,0 +1,79 @@
+def retrieve_level_data(nested_dict, udl_list, start_date, end_date, param="IV", matur=1, strike=100):
+    """
+    Retrieve and process data from a nested dictionary, integrating percentile ranking and backfilling.
+
+    Parameters:
+    - nested_dict: Dict with hierarchical data (date -> UDL -> parameters)
+    - udl_list: List of underlyings to include
+    - start_date: Start date for retrieval
+    - end_date: End date for retrieval
+    - param: Parameter to extract (default "IV")
+    - matur: Maturity filter (default 1)
+    - strike: Strike level filter (default 100)
+
+    Returns:
+    - result_df: DataFrame containing the retrieved and processed data.
+    """
+
+    # Define translation dictionary for strike types
+    translation_dict = {"Moneyness": "IV", "Delta": "IVTD"}
+
+    # Use translated parameter if provided
+    translated_param = translation_dict.get(param, param)
+
+    # Convert start and end dates
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
+
+    # Initialize results dictionary
+    results = {date: {} for date in pd.date_range(start_date, end_date)}
+
+    # Ensure backfilled data is processed before filtering
+    filled_data = backfill_missing_data(nested_dict, udl_list, translated_param, direction="backward")
+
+    # Ensure valid backfilled data exists
+    if filled_data is None or filled_data.empty:
+        print("No available data after backfill.")
+        return None
+
+    # Define parameter levels based on the selected parameter
+    if translated_param == "IV":
+        param_levels = moneyness_levels  # Ensure these variables exist in your context
+    elif translated_param == "IVTD":
+        param_levels = delta_levels
+    else:
+        print("Invalid parameter selected")
+        return None
+
+    # Create DataFrame for percentile ranking
+    percentile_rank_surface = pd.DataFrame(index=param_levels, columns=filled_data.columns.levels[1])
+
+    # Compute percentiles for each maturity
+    for param in param_levels:
+        for mat in percentile_rank_surface.columns:
+            if (param, mat) not in filled_data.columns:
+                continue
+            percentile_rank_surface.loc[param, mat] = np.nan  # Placeholder for actual percentile logic
+
+    # Process nested dictionary for data retrieval
+    for date_str, udl_data in nested_dict.items():
+        date = pd.to_datetime(date_str)
+
+        if start_date <= date <= end_date:
+            for udl in udl_list:
+                if udl in udl_data:
+                    for p, maturity_data in udl_data[udl].items():
+                        if p == translated_param:
+                            for mat in maturity_data:
+                                if mat == matur:
+                                    strike_data = maturity_data[mat]
+                                    if strike in strike_data:
+                                        results[date][udl] = strike_data[strike]
+
+    # Convert results to DataFrame
+    result_df = pd.DataFrame.from_dict(results, orient="index")
+
+    # Ensure result_df has the same structure as the original
+    result_df.index.name = "Date"
+
+    return result_df

@@ -1,0 +1,28 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define the rolling window (e.g., 60 days)
+rolling_window = 60
+
+# Choose a specific spread column dynamically (example: first one found)
+spread_col = [col for col in df_vol.columns if "Spread" in col][0]
+
+# Compute rolling mean and standard deviation
+df_vol["Spread_Mean"] = df_vol[spread_col].rolling(rolling_window).mean()
+df_vol["Spread_Std"] = df_vol[spread_col].rolling(rolling_window).std()
+
+# Compute Z-score
+df_vol["Z-Score"] = (df_vol[spread_col] - df_vol["Spread_Mean"]) / df_vol["Spread_Std"]
+
+# Plot the Z-score
+plt.figure(figsize=(12, 5))
+plt.plot(df_vol.index, df_vol["Z-Score"], label="Z-Score", color="blue")
+plt.axhline(0, color="black", linestyle="--")  # Mean line
+plt.axhline(2, color="red", linestyle="--", label="Upper Threshold (2)")
+plt.axhline(-2, color="green", linestyle="--", label="Lower Threshold (-2)")
+plt.title(f"Z-Score of {spread_col} (Rolling {rolling_window} Days)")
+plt.xlabel("Date")
+plt.ylabel("Z-Score")
+plt.legend()
+plt.show()

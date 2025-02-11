@@ -1,0 +1,44 @@
+import pandas as pd
+import numpy as np
+from scipy.stats import percentileofscore
+
+def calculate_percentile_rank(df, horizons):
+    """
+    Computes the percentile rank of each column at each date 
+    relative to the specified historical horizons.
+    
+    Parameters:
+    df (pd.DataFrame): DataFrame indexed by time with numeric columns.
+    horizons (list): List of lookback periods (in days) for percentile calculation.
+    
+    Returns:
+    pd.DataFrame: DataFrame with additional columns named `<original_col>_<horizon>`.
+    """
+    result_df = df.copy()
+    
+    for horizon in horizons:
+        horizon_label = f"{horizon}y"
+        window_days = int(252 * horizon)  # Assuming 252 trading days per year
+        
+        for col in df.columns:
+            result_df[f"{col}_{horizon_label}"] = [
+                percentileofscore(df[col].iloc[max(0, i-window_days):i].dropna(), val, kind='rank') 
+                if i > window_days else np.nan
+                for i, val in enumerate(df[col])
+            ]
+    
+    return result_df
+
+# Example Usage
+# Assuming `df` is your DataFrame with a datetime index and numeric columns
+df = pd.DataFrame({
+    "A": np.random.randn(2520),  # 10 years of data
+    "B": np.random.randn(2520)
+}, index=pd.date_range(start="2014-01-01", periods=2520, freq='B'))
+
+horizons = [1, 2, 5]  # Years
+df_percentile = calculate_percentile_rank(df, horizons)
+
+# Display the dataframe
+import ace_tools as tools
+tools.display_dataframe_to_user(name="Percentile Rank Data", dataframe=df_percentile)

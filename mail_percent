@@ -1,0 +1,42 @@
+def calculate_percentile_rank_single_date(df, date, horizons):
+    """
+    Computes the percentile rank of each column at a specific date 
+    relative to the specified historical horizons.
+    
+    Parameters:
+    df (pd.DataFrame): DataFrame indexed by time with numeric columns.
+    date (str or pd.Timestamp): The date for which to compute percentile ranks.
+    horizons (list): List of lookback periods (in years) for percentile calculation.
+    
+    Returns:
+    pd.DataFrame: DataFrame with the percentile ranks for each column at the specified date.
+    """
+    result = {}
+
+    for horizon in horizons:
+        window_days = int(252 * horizon)  # Assuming 252 trading days per year
+        end_idx = df.index.get_loc(date)  # Get index position of the specified date
+        start_idx = max(0, end_idx - window_days)  # Compute start index for the lookback window
+        
+        historical_data = df.iloc[start_idx:end_idx]  # Get historical data for the horizon
+        
+        percentile_ranks = {
+            col: percentileofscore(historical_data[col].dropna(), df.at[date, col], kind='rank') 
+            for col in df.columns
+        }
+        
+        result[f"{horizon}y"] = percentile_ranks
+
+    # Convert to DataFrame with horizons as index
+    result_df = pd.DataFrame(result).T
+
+    return result_df
+
+# Define the specific date for percentile rank calculation
+specific_date = "2023-01-02"
+
+# Compute percentile ranks
+df_percentile_single_date = calculate_percentile_rank_single_date(df, specific_date, horizons)
+
+# Display the resulting DataFrame
+df_percentile_single_date

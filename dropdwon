@@ -1,0 +1,27 @@
+import ipywidgets as widgets
+from IPython.display import display
+
+# Function to create/update dropdown
+def create_dropdown(options_list):
+    dropdown = widgets.Dropdown(
+        options=options_list,
+        value=options_list[10] if len(options_list) >= 11 else options_list[0],
+        description="Select:"
+    )
+    return dropdown
+
+# Initial options list
+options_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']
+
+# Create and display dropdown
+dropdown = create_dropdown(options_list)
+display(dropdown)
+
+# Simulate updating the list dynamically
+def update_options(new_list):
+    dropdown.options = new_list
+    dropdown.value = new_list[10] if len(new_list) >= 11 else new_list[0]
+
+# Example: Updating the dropdown with a new list
+new_options = ['X', 'Y', 'Z', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'AA', 'BB']
+update_options(new_options)

@@ -1,0 +1,32 @@
+import ipywidgets as widgets
+from IPython.display import display
+
+# Initial udl_list
+udl_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']
+
+# Create dropdown
+udl_widget = widgets.Dropdown(
+    options=udl_list,
+    value=udl_list[10] if len(udl_list) >= 11 else udl_list[0],
+    description="Select:"
+)
+
+# Function to update dropdown when list changes
+def update_udl_widget(change):
+    new_list = change['new']
+    udl_widget.options = new_list
+    udl_widget.value = new_list[10] if len(new_list) >= 11 else new_list[0]
+
+# Observable list variable
+udl_list_var = widgets.Text(visible=False)
+udl_list_var.observe(update_udl_widget, names='value')
+
+# Simulate list update
+def set_udl_list(new_list):
+    udl_list_var.value = str(new_list)  # Trigger observe event
+
+# Display dropdown
+display(udl_widget)
+
+# Example: Update list dynamically
+set_udl_list(['X', 'Y', 'Z', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'AA', 'BB'])

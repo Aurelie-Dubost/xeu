@@ -1,0 +1,37 @@
+import pandas as pd
+
+def add_fixed_avg(df, column: str, months: int):
+    """
+    Computes a fixed average over the last 'months' months and assigns it to all rows.
+    
+    Parameters:
+    df (pd.DataFrame): DataFrame with a DatetimeIndex.
+    column (str): The name of the column to average.
+    months (int): The number of months over which to compute the average.
+    
+    Returns:
+    pd.DataFrame: DataFrame with an additional column containing the fixed average.
+    """
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise ValueError("The DataFrame index must be a DatetimeIndex.")
+    
+    # Define the start date for averaging
+    start_date = df.index[-1] - pd.DateOffset(months=months)
+    
+    # Compute the average over the fixed period
+    fixed_avg = df.loc[start_date:, column].mean()
+    
+    # Assign the fixed average to all rows
+    df[f"fixed_avg_{months}M"] = fixed_avg
+    
+    return df
+
+# Sample DataFrame
+data = {"value": [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]}
+df = pd.DataFrame(data, index=pd.date_range(start="2023-01-01", periods=12, freq="M"))
+
+# Apply function for a 3-month fixed average
+df = add_fixed_avg(df, "value", 3)
+
+# Display result
+print(df)

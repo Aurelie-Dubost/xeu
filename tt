@@ -1,0 +1,55 @@
+def style_surface_level(df, caption, orientation='original', font_size='10px'):
+    """
+    Style a pandas DataFrame with formatted values and custom table styles.
+    
+    Parameters:
+        df (pandas DataFrame): The DataFrame to style.
+        caption (str): The caption to add to the table.
+        orientation (str, optional): The orientation of the table ('original' or 'transpose'). Defaults to 'original'.
+        font_size (str, optional): The font size to use for the table. Defaults to '10px'.
+    
+    Returns:
+        styled pandas DataFrame: The styled DataFrame.
+    """
+    
+    if orientation == 'transpose':
+        df_styled = df.style.format(precision=2).set_table_styles([
+            # Header styling (White background, enforced height)
+            {'selector': 'thead', 'props': [('background-color', 'rgb(255, 255, 255)'), 
+                                            ('color', 'black'), 
+                                            ('font-size', '14px'), 
+                                            ('font-weight', 'bold'),
+                                            ('min-height', '75px !important'),
+                                            ('line-height', '75px'),
+                                            ('display', 'table-header-group !important')]},
+
+            # General cell styling
+            {'selector': 'td', 'props': [('max-width', '150px'), 
+                                         ('text-align', 'center'), 
+                                         ('padding', '5px')]},
+        ])
+    
+    else:
+        df_styled = df.style.format(precision=2).set_table_styles([
+            # Header styling (White background, enforced height)
+            {'selector': 'thead', 'props': [('background-color', 'rgb(255, 255, 255)'), 
+                                            ('color', 'black'), 
+                                            ('font-size', '14px'), 
+                                            ('font-weight', 'bold'),
+                                            ('min-height', '75px !important'),
+                                            ('line-height', '75px'),
+                                            ('display', 'table-header-group !important')]},
+
+            # General cell styling
+            {'selector': 'td', 'props': [('max-width', '150px'), 
+                                         ('text-align', 'center'), 
+                                         ('padding', '5px')]},
+        ])
+    
+    # Set caption
+    df_styled = df_styled.set_caption(caption)
+
+    # Ensure table does not collapse height
+    df_styled = df_styled.set_table_attributes("style='border-collapse: collapse; width: 100%;'")
+
+    return df_styled

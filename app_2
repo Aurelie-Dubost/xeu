@@ -1,0 +1,136 @@
+import pickle
+from ipywidgets import Dropdown, HTML
+
+# ========================================
+# Global Variables and Index Mappings
+# ========================================
+
+global_indices = ['EU_STOXX50E', 'EU_SX5P', 'EU_SX7E', 'FR_CAC', 'DE_DAX', 
+                  'GB_FTSE100', 'CH_SMI', 'US_SPX', 'US_NDX', 'US_RLY', 
+                  'JP_NKY', 'HK_HSCEI']
+
+subset_global_indices = ['EU_STOXX50E', 'GB_FTSE100', 'US_SPX', 'US_NDX', 
+                         'US_RLY', 'JP_NKY', 'HK_HSCEI']
+
+index_mapping = {
+    "Global indices": global_indices,
+    "Global indices (subset)": subset_global_indices,
+    "SXXP sectors": "SXXP_sectors",
+    "SPX sectors": "SPX_sectors",
+    "MAG7": "MAG7_indices"
+}
+
+# Dictionary mapping widgets to pickle files
+pickle_mapping = {
+    "Global indices": "global_indices.pickle",
+    "Global indices (subset)": "subset_global_indices.pickle",
+    "SXXP sectors": "SXXP_sectors.pickle",
+    "SPX sectors": "SPX_sectors.pickle",
+    "MAG7": "mag7.pickle"
+}
+
+# ========================================
+# Function to Load Pickle Files
+# ========================================
+def load_pickle(file_path):
+    """
+    Load pickle file from the given path.
+    """
+    try:
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        print(f"Pickle file not found: {file_path}")
+        return None
+
+# ========================================
+# Callback Functions for Widgets
+# ========================================
+
+def update_univers_widgets(change):
+    """
+    Updates the universe widget values based on the main selection.
+    Affects only `udl_univers_widget_x` series.
+    """
+    for i in range(1, 6):  # Assuming 5 universe widgets
+        globals()[f'udl_univers_widget_{i}'].value = change['new']
+
+def update_udl_widgets(change):
+    """
+    Updates the indices widget values based on the main selection.
+    Affects only `udl_indices_widget_x` series.
+    """
+    for i in range(1, 6):  # Assuming 5 indices widgets
+        globals()[f'udl_indices_widget_{i}'].value = change['new']
+
+def update_udl_widget_master(change):
+    """
+    Updates both universe and indices widget options based on selection.
+    Handles dropdown menus dynamically.
+    """
+    selected_index = next((key for key, value in index_mapping.items() if change['new'] in value), None)
+
+    if selected_index:
+        # Update universe widgets
+        for i in range(1, 6):  # Assuming 5 universe widgets
+            globals()[f'udl_univers_widget_{i}'].options = index_mapping[selected_index]
+
+        # Update indices widgets
+        for i in range(1, 6):  # Assuming 5 indices widgets
+            globals()[f'udl_indices_widget_{i}'].options = index_mapping[selected_index]
+
+def update_udl_widget_master_with_pickle(value):
+    """
+    Updates the widget master options dynamically based on pickle files.
+    Loads pickle files for further processing if necessary.
+    """
+    if value in index_mapping:
+        udl_indices_widget_master.options = index_mapping[value]
+    
+    if value in pickle_mapping:
+        pickle_file = load_pickle(pickle_mapping[value])
+        if pickle_file:
+            print(f"Loaded data from: {pickle_mapping[value]}")
+        else:
+            print("No pickle file found for this selection.")
+
+# ========================================
+# Initialize Dropdown Widgets
+# ========================================
+
+udl_indices_widget_master = Dropdown(
+    layout={'width': '150px'},
+    options=global_indices,
+    value='US_SPX'
+)
+
+# Observe changes in master dropdown
+udl_indices_widget_master.observe(update_univers_widgets, names='value')
+udl_indices_widget_master.observe(update_udl_widgets, names='value')
+udl_indices_widget_master.observe(update_udl_widget_master, names='value')
+
+# ========================================
+# HTML Labels for Widgets
+# ========================================
+
+widget_labels = [
+    ("Underlying", "udl_indices_widget_"),
+    ("Vol matur (months)", "matu_widget_"),
+    ("RV (business days)", "time_frame_widget_"),
+    ("Spread Mode", "spread_mode_widget_"),
+    ("Vol Type", "vol_type_widget_"),
+    ("Strike", "param_level_widget_"),
+    ("Start Date", "start_date_widget_"),
+    ("End Date", "end_date_widget_")
+]
+
+html_widgets_avant = [HTML(value=f"<b>{label}</b>") for label, _ in widget_labels]
+html_widgets_apres = [HTML(value=f"<b>{label}</b>") for label, _ in widget_labels]
+
+# Initialize widget values dynamically
+for i in range(1, 6):  # Assuming 5 widgets
+    globals()[f'udl_univers_widget_{i}'] = Dropdown(options=global_indices, value='US_SPX')
+    globals()[f'udl_indices_widget_{i}'] = Dropdown(options=global_indices, value='US_SPX')
+
+# Set initial options for `udl_widget_master` based on `udl_indices_widget_master`
+update_udl_widget_master(udl_indices_widget_master.value)

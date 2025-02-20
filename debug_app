@@ -1,0 +1,67 @@
+import ipywidgets as widgets
+from IPython.display import display
+
+# Define a sample index mapping (similar to your real index_mapping)
+index_mapping = {
+    'MAG7': ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA'],
+    'SPX': ['XOM', 'JNJ', 'PG', 'V', 'UNH', 'DIS', 'NFLX'],
+    'NASDAQ': ['ADBE', 'PYPL', 'INTC', 'CSCO', 'AMD', 'AVGO', 'PEP']
+}
+
+# Create the main dropdown for selecting a universe
+univers_widget_master = widgets.Dropdown(
+    options=index_mapping.keys(),
+    value='MAG7',
+    description='Universe:'
+)
+
+# Create a dropdown for selecting an underlying (this should update based on universe)
+udl_widget_master = widgets.Dropdown(
+    options=index_mapping[univers_widget_master.value],
+    value=index_mapping[univers_widget_master.value][0],
+    description='Underlying:'
+)
+
+# Create another dropdown for selecting indices (should update based on udl_widget_master)
+udl_indices_widget = widgets.Dropdown(
+    options=index_mapping[udl_widget_master.value] if udl_widget_master.value in index_mapping else [],
+    value=index_mapping[udl_widget_master.value][0] if udl_widget_master.value in index_mapping else None,
+    description='Indices:'
+)
+
+# Debugging function to track updates
+def update_udl_widget_master(change):
+    selected_index = change['new']
+    
+    print(f"Updating udl_widget_master for {selected_index}...")
+    
+    if selected_index in index_mapping:
+        col_mapping = index_mapping[selected_index]
+    else:
+        col_mapping = []
+    
+    udl_widget_master.options = col_mapping
+    udl_widget_master.value = col_mapping[0] if col_mapping else None
+    
+    # Trigger update for indices
+    update_udl_indices_widgets({'new': udl_widget_master.value})
+
+def update_udl_indices_widgets(change):
+    selected_udl = change['new']
+
+    print(f"Updating udl_indices_widget for {selected_udl}...")
+    
+    if selected_udl in index_mapping:
+        col_mapping = index_mapping[selected_udl]
+    else:
+        col_mapping = []
+    
+    udl_indices_widget.options = col_mapping
+    udl_indices_widget.value = col_mapping[0] if col_mapping else None
+
+# Attach observers
+univers_widget_master.observe(update_udl_widget_master, names='value')
+udl_widget_master.observe(update_udl_indices_widgets, names='value')
+
+# Display widgets
+display(univers_widget_master, udl_widget_master, udl_indices_widget)

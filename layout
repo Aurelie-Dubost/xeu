@@ -1,0 +1,21 @@
+tab_n = widgets.VBox([
+    widgets.HTML(value=f'<h2>{button}</h2>', layout=widgets.Layout(width='100%', margin='0px 0px 0px 0px')),
+
+    # Fix: Ensure Left and Right Plots are in the same row
+    widgets.HBox([
+        widgets.VBox([interactive_scatter_indices_plot, checkbox1], 
+                     layout=widgets.Layout(width='50%', overflow='hidden')),
+        widgets.VBox([interactive_stats_level_plot, checkbox2], 
+                     layout=widgets.Layout(width='50%', overflow='hidden'))
+    ]),
+
+    widgets.HBox([
+        widgets.VBox([interactive_vert_bar_plot, checkbox3], 
+                     layout=widgets.Layout(width='50%', overflow='hidden')),
+        widgets.VBox([interactive_vol_regime_tab_plot, checkbox4], 
+                     layout=widgets.Layout(width='50%', overflow='hidden'))
+    ])
+])
+
+# Fix: Remove the invalid margin property
+tab_n.layout = widgets.Layout(width='100%', overflow_x='hidden')

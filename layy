@@ -1,0 +1,31 @@
+import ipywidgets as widgets
+from ipywidgets import Layout
+
+# Define a common layout for all plots to ensure equal size
+common_size = Layout(width='100%', height='300px')
+
+# Assign the same layout to all plots
+interactive_scatter_indices_plot.layout = common_size
+interactive_stats_level_plot.layout = common_size
+interactive_vert_bar_plot.layout = common_size
+interactive_vol_regime_tab_plot.layout = common_size
+
+# Create two vertical columns (left and right)
+left_col = widgets.VBox([
+    interactive_scatter_indices_plot,
+    interactive_stats_level_plot
+], layout=Layout(width='50%', min_width='400px', overflow='hidden'))
+
+right_col = widgets.VBox([
+    interactive_vert_bar_plot,
+    interactive_vol_regime_tab_plot
+], layout=Layout(width='50%', min_width='400px', overflow='hidden'))
+
+# Combine both columns into a horizontal layout
+layout_container = widgets.HBox([left_col, right_col],
+                                layout=Layout(width='100%', overflow_x='hidden'))
+
+# Ensure the overall layout does not introduce scrolling
+layout_container.layout.overflow = 'hidden'
+
+# Assign the final layout to your tab

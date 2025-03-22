@@ -1,0 +1,100 @@
+def style_table_vol_regime(df, caption, source_note=None):
+    """
+    Style a pandas DataFrame for display with dynamic and balanced column widths.
+
+    Features:
+    - First column (labels) sized to fit content but capped to avoid waste.
+    - Last two columns have equal width.
+    - All other columns scale based on content length.
+    - Total width constrained for visual balance.
+    - No line breaks. Table is tight, readable, and compact.
+    """
+
+    import pandas as pd
+
+    # Parameters
+    base_table_width = 1000  # Total table width in pixels
+    px_per_char = 7          # Approximate width per character
+    min_col_px = 60          # Minimum column width
+    max_first_col_px = 220   # Cap for first column
+
+    # --- Step 1: Compute max string length per column ---
+    max_lengths = df.astype(str).applymap(len).max()
+
+    # --- Step 2: Derive weight (importance) for each column based on content length ---
+    column_weights = max_lengths * px_per_char
+    column_weights = column_weights.clip(lower=min_col_px)
+
+    # --- Step 3: Handle column-specific overrides ---
+    first_col = df.columns[0]
+    last_cols = df.columns[-2:]
+
+    # Equal width for last two columns
+    max_last = column_weights[last_cols].max()
+    for col in last_cols:
+        column_weights[col] = max_last
+
+    # Cap first column width
+    column_weights[first_col] = min(column_weights[first_col], max_first_col_px)
+
+    # --- Step 4: Normalize weights to total width ---
+    scaling_factor = base_table_width / column_weights.sum()
+    column_widths = (column_weights * scaling_factor).astype(int)
+
+    # --- Step 5: Create the Styler object ---
+    df_style = df.style
+
+    # Background gradient (example: first column)
+    df_style = df_style.background_gradient(
+        subset=pd.IndexSlice[:, [first_col]],
+        cmap='Reds', vmin=0, vmax=100
+    )
+
+    # Format columns with numeric types
+    df_style = df_style.format({col: '{:.0f}%' for col in df.columns if df[col].dtype.kind in 'if'})
+
+    # Center all cell content
+    df_style = df_style.set_properties(**{'text-align': 'center'})
+
+    # --- Step 6: Table-wide style rules ---
+    base_styles = [
+        {'selector': 'th', 'props': [('font-size', '12px !important'), ('text-align', 'center'),
+                                     ('padding', '0px'), ('min-height', '60px'), ('line-height', '2'),
+                                     ('white-space', 'nowrap')]},
+        {'selector': 'td', 'props': [('font-size', '11px !important'), ('text-align', 'center'),
+                                     ('padding', '0px'), ('line-height', '1.5'), ('white-space', 'nowrap')]}
+    ]
+    df_style.set_table_styles(base_styles)
+
+    # --- Step 7: Column-specific width styling ---
+    column_styles = [
+        {
+            'selector': f'th.col{i}, td.col{i}',
+            'props': [('width', f'{column_widths[col]}px'), ('white-space', 'nowrap')]
+        }
+        for i, col in enumerate(df.columns)
+    ]
+    df_style.set_table_styles(column_styles, overwrite=False)
+
+    # --- Step 8: First column truncate control (optional) ---
+    df_style.set_table_styles([
+        {
+            'selector': 'th:first-child, td:first-child',
+            'props': [
+                ('white-space', 'nowrap'),
+                ('text-overflow', 'ellipsis'),
+                ('overflow', 'hidden'),
+                ('max-width', f'{column_widths[first_col]}px')
+            ]
+        }
+    ], overwrite=False)
+
+    # --- Step 9: Table HTML attributes (width, height, layout) ---
+    df_style.set_table_attributes(
+        'style="width:100%; border-collapse:collapse; border:1px solid black; height:auto;"'
+    )
+
+    # --- Step 10: Caption ---
+    df_style.set_caption(caption)
+
+    return df_style

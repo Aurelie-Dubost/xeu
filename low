@@ -1,0 +1,12 @@
+# Prevent line breaks in the first column explicitly
+df_style.set_table_styles([
+    {
+        'selector': 'th:first-child, td:first-child',
+        'props': [
+            ('white-space', 'nowrap'),
+            ('text-overflow', 'ellipsis'),
+            ('overflow', 'hidden'),
+            ('max-width', '150px')  # You can increase this if needed
+        ]
+    }
+], overwrite=False)

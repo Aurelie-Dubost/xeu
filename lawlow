@@ -1,0 +1,91 @@
+def style_table_vol_regime(df, caption, source_note=None):
+    """
+    Style a pandas DataFrame for display with dynamic column widths.
+    - First column auto-sized based on max content length.
+    - Last two columns (typically metrics) have equal width.
+    - All other columns adaptively fit content with nowrap formatting.
+    """
+
+    # --- Compute max length per column (in characters) ---
+    max_lengths = df.astype(str).applymap(len).max()
+
+    # --- Base unit width in pixels per character ---
+    base_width = 10
+
+    # Identify column roles
+    first_col = df.columns[0]
+    last_cols = df.columns[-2:]
+
+    # --- Compute custom column widths ---
+    column_widths = {}
+    for col in df.columns:
+        if col == first_col:
+            column_widths[col] = max_lengths[col] * base_width + 40  # Room for long labels
+        elif col in last_cols:
+            continue  # Handle later
+        else:
+            column_widths[col] = max_lengths[col] * base_width + 10
+
+    # Equalize last two column widths
+    max_last_width = max([max_lengths[col] for col in last_cols]) * base_width + 20
+    for col in last_cols:
+        column_widths[col] = max_last_width
+
+    # --- Begin styling ---
+    df_style = df.style
+
+    # Optional: background or formatting styling
+    df_style = df_style.background_gradient(
+        subset=pd.IndexSlice[:, [first_col]],
+        cmap='Reds', vmin=0, vmax=100
+    )
+
+    # Format columns if needed (example for floats)
+    df_style = df_style.format({col: '{:.0f}%' for col in df.columns if df[col].dtype.kind in 'if'})
+
+    # Center all text by default
+    df_style = df_style.set_properties(**{'text-align': 'center'})
+
+    # --- Table-wide styling rules ---
+    base_styles = [
+        {'selector': 'th', 'props': [('font-size', '12px !important'), ('text-align', 'center'),
+                                     ('padding', '0px'), ('min-height', '60px'), ('line-height', '2'),
+                                     ('white-space', 'nowrap')]},
+        {'selector': 'td', 'props': [('font-size', '11px !important'), ('text-align', 'center'),
+                                     ('padding', '0px'), ('line-height', '1.5'),
+                                     ('white-space', 'nowrap')]}
+    ]
+    df_style.set_table_styles(base_styles)
+
+    # --- Per-column width styles ---
+    column_styles = [
+        {
+            'selector': f'th.col{i}, td.col{i}',
+            'props': [('width', f'{column_widths[col]}px'), ('white-space', 'nowrap')]
+        }
+        for i, col in enumerate(df.columns)
+    ]
+    df_style.set_table_styles(column_styles, overwrite=False)
+
+    # --- First column explicit nowrap & ellipsis ---
+    df_style.set_table_styles([
+        {
+            'selector': 'th:first-child, td:first-child',
+            'props': [
+                ('white-space', 'nowrap'),
+                ('text-overflow', 'ellipsis'),
+                ('overflow', 'hidden'),
+                ('max-width', f'{column_widths[first_col]}px')
+            ]
+        }
+    ], overwrite=False)
+
+    # --- Optional table layout attributes ---
+    df_style.set_table_attributes(
+        'style="width:100%; border-collapse:collapse; border:1px solid black; height:400px;"'
+    )
+
+    # Caption
+    df_style.set_caption(caption)
+
+    return df_style

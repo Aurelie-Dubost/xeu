@@ -1,0 +1,27 @@
+# Description: Calculates the implied move on a specific date based on straddle prices or implied vols
+
+import numpy as np
+
+def implied_move_straddle(S0, call_price, put_price):
+    """
+    Estimate implied move using ATM straddle price.
+    """
+    return (call_price + put_price) / S0
+
+def implied_move_vol(S0, iv, days):
+    """
+    Estimate implied move using implied volatility and time to event.
+    """
+    return S0 * iv * np.sqrt(days / 365)
+
+def implied_event_vol(S0, iv_before, iv_after, T_before, T_after):
+    """
+    Isolate event-specific implied volatility using variance subtraction.
+    """
+    variance_before = iv_before**2 * T_before
+    variance_after = iv_after**2 * T_after
+    T_event = T_after - T_before
+    var_event = (variance_after - variance_before) / T_event
+    sigma_event = np.sqrt(var_event)
+    move_event = S0 * sigma_event * np.sqrt(1/365)
+    return sigma_event, move_event

@@ -1,0 +1,20 @@
+import numpy as np
+
+# Inputs from BBG
+sigma1 = 0.2289   # Pre-event IV
+T1 = 5 / 365
+
+sigma2 = 0.2299   # Post-event IV
+T2 = 7 / 365
+
+S = 5529.07       # Spot price
+
+# Step 1: Compute event-day variance
+var_event = (sigma2**2 * T2 - sigma1**2 * T1) / (T2 - T1)
+sigma_event = np.sqrt(var_event)
+
+# Step 2: Compute absolute implied move
+implied_move = S * sigma_event * np.sqrt(1 / 365)
+
+print("Event-day implied volatility: {:.2%}".format(sigma_event))
+print("Implied move (absolute): {:.2f} pts".format(implied_move))

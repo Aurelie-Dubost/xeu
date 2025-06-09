@@ -1,0 +1,88 @@
+def generate_email_html(image_cid_list, title_map=None):
+    """
+    Generate a responsive 2-column HTML email layout, left-aligned, with fixed pixel widths.
+    
+    Parameters:
+    -----------
+    image_cid_list : list of str
+        List of image CID references (e.g., 'scatter_indices_plot.png', must match email attachments)
+    
+    title_map : dict, optional
+        Dictionary mapping each image filename to a title displayed above the image
+    
+    Returns:
+    --------
+    html_str : str
+        Full HTML body string, ready for email sending
+    """
+    
+    # Define fixed widths for layout
+    max_width = 680
+    img_width = 320
+    
+    def format_title(img_name):
+        if title_map and img_name in title_map:
+            return title_map[img_name]
+        else:
+            return img_name.replace("_", " ").replace(".png", "").title()
+    
+    # Start HTML
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; font-size: 11pt; color: #000000;">
+    <table style="width:{max_width}px; table-layout: fixed; border-collapse: collapse;">
+    """
+
+    # Add rows in pairs
+    for i in range(0, len(image_cid_list), 2):
+        pair = image_cid_list[i:i+2]
+
+        html += "<tr>"
+
+        for img in pair:
+            title = format_title(img)
+            html += f"""
+            <td style="width:{img_width}px; vertical-align: top; text-align: left; padding: 5px;">
+                <p style="font-weight: bold; margin-bottom: 4px;">{title}</p>
+                <img src="cid:{img}" style="width:{img_width}px; display: block;" />
+            </td>
+            """
+
+        # If odd number of plots, fill last column
+        if len(pair) == 1:
+            html += f'<td style="width:{img_width}px;"></td>'
+
+        html += "</tr>"
+
+    # Close table and HTML
+    html += f"""
+    </table>
+    <p style="font-style: italic; font-size: 9pt; color: #555;">Sources: BNP Paribas. Charts use 3m ATM vol, 10d RV, 2y z-scores</p>
+    </body>
+    </html>
+    """
+
+    return html
+
+
+# List of chart CIDs used as attachments in email
+image_list = [
+    "scatter_indices_plot.png",
+    "dividend_bar_plot.png",
+    "stats_level_plot.png",
+    "skew_plot.png",
+    "spread_plot.png"
+]
+
+# Optional mapping of nicer titles
+titles = {
+    "scatter_indices_plot.png": "Global vol picture",
+    "dividend_bar_plot.png": "Global carry",
+    "stats_level_plot.png": "Global 3m ATM vol",
+    "skew_plot.png": "SPX and SX5E 3m ATM vol",
+    "spread_plot.png": "SX5E - SPX 3m ATM vol spread"
+}
+
+html_body = generate_email_html(image_list, title_map=titles)
+
+send_recap_email(email_to=['your.recipient@bank.com'], html_body=html_body, update_charts=True)

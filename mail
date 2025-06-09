@@ -1,34 +1,141 @@
-<table style="width: 600px; border-collapse: collapse; margin: 0 auto; font-family: Arial; table-layout: fixed;">
-  <!-- Header Image -->
-  <tr>
-    <td colspan="2" style="text-align: center; padding: 0;">
-      <p style="font-weight: bold;">Global vol picture</p>
-      <img src="cid:scatter_indices_plot.png" style="width: 560px; display: block; margin: 0 auto;" />
-      <p style="font-style: italic; font-size: 10pt;">Data: IV: 3m ATM vol; RV 10-days; z-score over 2 years</p>
-    </td>
-  </tr>
+import os
 
-  <!-- Two Charts Side-by-Side -->
-  <tr>
-    <td style="width: 50%; text-align: center; padding: 5px;">
-      <p style="font-weight: bold;">Global carry</p>
-      <img src="cid:dividend_bar_plot.png" style="width: 270px;" />
-    </td>
-    <td style="width: 50%; text-align: center; padding: 5px;">
-      <p style="font-weight: bold;">Global 3m ATM vol</p>
-      <img src="cid:stats_level_plot.png" style="width: 270px;" />
-    </td>
-  </tr>
+# --------------------------------------------
+# Step 1: Declarative image layout definition
+# --------------------------------------------
 
-  <!-- Two More Charts Side-by-Side -->
-  <tr>
-    <td style="width: 50%; text-align: center; padding: 5px;">
-      <p style="font-weight: bold;">SPX and SX5E 3m ATM vol</p>
-      <img src="cid:skew_plot.png" style="width: 270px;" />
-    </td>
-    <td style="width: 50%; text-align: center; padding: 5px;">
-      <p style="font-weight: bold;">SX5E_SPX ATM vol spread</p>
-      <img src="cid:spread_plot.png" style="width: 270px;" />
-    </td>
-  </tr>
-</table>
+image_layout_list = [
+    {"name": "scatter_indices_plot.png", "title": "Global vol picture", "layout": "one_plot"},
+    {"name": "dividend_bar_plot.png", "title": "Global carry", "layout": "two_plots"},
+    {"name": "stats_level_plot.png", "title": "Global 3m ATM vol", "layout": "two_plots"},
+    {"name": "stats_skew_plot.png", "title": "SPX and SX5E 3m ATM vol", "layout": "two_plots"},
+    {"name": "SX5E_SPX_vol_ts.png", "title": "SX5E SPX Vol TS", "layout": "two_plots"},
+    {"name": "SX5E_SPX_skew_ts.png", "title": "SX5E SPX Skew TS", "layout": "two_plots"},
+    {"name": "SX5E_SPX_vol_spread_ts.png", "title": "SX5E SPX 3m ATM vol spread", "layout": "two_plots"},
+    {"name": "plot_term_structure_ts.png", "title": "Term Structure TS", "layout": "two_plots"},
+    {"name": "scatter_termstructure_plot.png", "title": "Scatter Term Structure", "layout": "two_plots"},
+    {"name": "style_df_merged.png", "title": "", "layout": "tab"}
+]
+
+# ---------------------------------------------------
+# Step 2: Function to generate structured HTML layout
+# ---------------------------------------------------
+
+def generate_email_html(image_layout_list):
+    """
+    Generate HTML email body from structured image layout instructions.
+    """
+    max_width = 640
+    img_width = 320
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; font-size: 11pt; color: #000000;">
+    <table style="width:{max_width}px; table-layout: fixed; border-collapse: collapse; margin: 0 auto;">
+    """
+
+    # Buffer for collecting pairs of two_plots
+    two_plot_buffer = []
+
+    for item in image_layout_list:
+        name = item["name"]
+        title = item.get("title", "").strip()
+        layout = item.get("layout", "two_plots")
+
+        if layout == "one_plot":
+            html += f"""
+            <tr>
+              <td colspan="2" style="text-align: center; padding: 5px;">
+                <p style="font-weight: bold; margin-bottom: 4px;">{title}</p>
+                <img src="cid:{name}" style="width:{max_width}px; display: block; margin: 0 auto;" />
+                <p style="font-style: italic; font-size: 10pt;">Data: IV 3m ATM vol, RV 10d, z-score 2y</p>
+              </td>
+            </tr>
+            """
+
+        elif layout == "two_plots":
+            two_plot_buffer.append((name, title))
+            if len(two_plot_buffer) == 2:
+                html += "<tr>"
+                for img_name, img_title in two_plot_buffer:
+                    html += f"""
+                    <td style="width:{img_width}px; vertical-align: top; text-align: left; padding: 5px;">
+                      <p style="font-weight: bold; margin-bottom: 4px;">{img_title}</p>
+                      <img src="cid:{img_name}" style="width:{img_width}px; display: block;" />
+                    </td>
+                    """
+                html += "</tr>"
+                two_plot_buffer = []
+
+        elif layout == "tab":
+            html += f"""
+            </table>
+            <table style="width:{max_width}px; margin: 0 auto; font-family: Arial, sans-serif;">
+            <tr>
+              <td style="padding-top: 10px;">
+                <p style="font-style: italic; font-size: 9pt; color: #555; margin: 0;">
+                  Sources: BNP Paribas. Charts use 3m ATM vol, 10d RV, 2y z-scores.
+                </p>
+              </td>
+            </tr>
+            </table>
+            """
+
+    # If one image left unpaired
+    if len(two_plot_buffer) == 1:
+        name, title = two_plot_buffer[0]
+        html += f"""
+        <tr>
+          <td style="width:{img_width}px; vertical-align: top; text-align: left; padding: 5px;">
+            <p style="font-weight: bold; margin-bottom: 4px;">{title}</p>
+            <img src="cid:{name}" style="width:{img_width}px; display: block;" />
+          </td>
+          <td style="width:{img_width}px;"></td>
+        </tr>
+        """
+
+    html += "</body></html>"
+    return html
+
+# ---------------------------------------------------
+# Step 3: Email sending function (uses generated HTML)
+# ---------------------------------------------------
+
+def send_recap_email(email_to='aurelie.dubost@uk.bnpparibas.com', content=None, update_charts=True):
+    """
+    Send recap email with attached chart images.
+    """
+    # Define filenames used in the layout
+    image_names = [item["name"] for item in image_layout_list]
+
+    if content is None:
+        content = prepare_html()  # fallback layout if needed
+
+    img_path = ""  # set if images are in subdirectory
+    files = []
+
+    for image in image_names:
+        full_path = os.path.join(img_path, image.strip())
+        if os.path.exists(full_path):
+            files.append(full_path)
+        else:
+            print(f"[WARN] Missing file: {full_path}")
+
+    mailer.send(
+        to=email_to,
+        subject='EDS vol update - Global params',
+        content=content,
+        files=files
+    )
+
+# ---------------------------------------------------
+# Step 4: Build and send
+# ---------------------------------------------------
+
+html_body = generate_email_html(image_layout_list)
+
+send_recap_email(
+    email_to='aurelie.dubost@uk.bnpparibas.com',
+    content=html_body,
+    update_charts=True
+)

@@ -1,0 +1,86 @@
+import os
+
+def send_recap_email(email_to='aurelie.dubost@uk.bnpparibas.com', content=None, update_charts=True):
+    """
+    Send an HTML recap email with attached chart images.
+
+    Parameters:
+    -----------
+    email_to : str or list of str
+        Recipient email(s)
+
+    content : str
+        HTML body (from generate_email_html)
+
+    update_charts : bool
+        Whether to regenerate charts before sending
+    """
+    # If content isn't passed, fallback to default template
+    if content is None:
+        content = prepare_html()
+
+    image_names = [
+        'scatter_indices_plot.png',
+        'dividend_bar_plot.png',
+        'stats_level_plot.png',
+        'stats_skew_plot.png',
+        'SX5E_SPX_vol_ts.png',
+        'SX5E_SPX_skew_ts.png',
+        'SX5E_SPX_vol_spread_ts.png',
+        'plot_term_structure_ts.png',
+        'scatter_termstructure_plot.png',
+        'style_df_merged.png'
+    ]
+
+    # Path to folder where images are stored (update if needed)
+    img_path = ""
+
+    # Safe loading: filter out any missing files
+    files = []
+    for image in image_names:
+        full_path = os.path.join(img_path, image.strip())
+        if os.path.exists(full_path):
+            files.append(full_path)
+        else:
+            print(f"[WARN] Missing file: {full_path}")
+
+    # Send email using mailer
+    mailer.send(
+        to=email_to,
+        subject='EDS vol update - Global params',
+        content=content,
+        files=files
+    )
+
+# Step 1: list of CIDs (must match the filenames exactly)
+image_list = [
+    'scatter_indices_plot.png',
+    'dividend_bar_plot.png',
+    'stats_level_plot.png',
+    'stats_skew_plot.png',
+    'SX5E_SPX_vol_ts.png',
+    'SX5E_SPX_skew_ts.png',
+    'SX5E_SPX_vol_spread_ts.png',
+    'plot_term_structure_ts.png',
+    'scatter_termstructure_plot.png',
+    'style_df_merged.png'
+]
+
+# Step 2: optional mapping to clean chart titles
+titles = {
+    "scatter_indices_plot.png": "Global vol picture",
+    "dividend_bar_plot.png": "Global carry",
+    "stats_level_plot.png": "Global 3m ATM vol",
+    "stats_skew_plot.png": "SPX and SX5E 3m ATM vol",
+    "SX5E_SPX_vol_spread_ts.png": "SX5E - SPX 3m ATM vol spread"
+}
+
+# Step 3: generate the HTML body
+html_body = generate_email_html(image_list, title_map=titles)
+
+# Step 4: send the email
+send_recap_email(
+    email_to='aurelie.dubost@uk.bnpparibas.com',
+    content=html_body,
+    update_charts=True
+)

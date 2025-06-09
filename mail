@@ -1,4 +1,64 @@
+from PIL import Image
 import os
+
+def resize_pngs(png_paths, target_width=640, output_dir=None):
+    """
+    Resize PNG files to a fixed width, preserving aspect ratio.
+
+    Parameters:
+    -----------
+    png_paths : list of str
+        Paths to the original PNG images
+
+    target_width : int
+        Desired width in pixels
+
+    output_dir : str or None
+        If provided, resized images are saved there; else originals are overwritten
+
+    Returns:
+    --------
+    list of str
+        Paths to resized PNG files
+    """
+    resized_paths = []
+
+    for path in png_paths:
+        if not os.path.isfile(path):
+            print(f"[WARN] Skipping missing file: {path}")
+            continue
+
+        with Image.open(path) as img:
+            w_percent = target_width / float(img.size[0])
+            target_height = int(float(img.size[1]) * w_percent)
+            resized_img = img.resize((target_width, target_height), Image.LANCZOS)
+
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+                out_path = os.path.join(output_dir, os.path.basename(path))
+            else:
+                out_path = path  # overwrite original
+
+            resized_img.save(out_path)
+            resized_paths.append(out_path)
+            print(f"✅ Resized: {out_path} → {target_width}x{target_height}px")
+
+    return resized_paths
+
+png_files = [
+    "scatter_indices_plot.png",
+    "dividend_bar_plot.png",
+    "stats_level_plot.png",
+    "stats_skew_plot.png"
+]
+
+# Resize to 640px wide, preserve aspect ratio, overwrite originals
+resize_pngs(png_files, target_width=640)
+
+# Optional: Save resized versions to a separate folder
+# resize_pngs(png_files, target_width=640, output_dir="resized/")
+
+
 
 # --------------------------------------------
 # Step 1: Declarative image layout definition
@@ -139,3 +199,4 @@ send_recap_email(
     content=html_body,
     update_charts=True
 )
+

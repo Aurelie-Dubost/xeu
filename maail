@@ -1,0 +1,34 @@
+<table style="width: 600px; border-collapse: collapse; margin: 0 auto; font-family: Arial; table-layout: fixed;">
+  <!-- Header Image -->
+  <tr>
+    <td colspan="2" style="text-align: center; padding: 0;">
+      <p style="font-weight: bold;">Global vol picture</p>
+      <img src="cid:scatter_indices_plot.png" style="width: 560px; display: block; margin: 0 auto;" />
+      <p style="font-style: italic; font-size: 10pt;">Data: IV: 3m ATM vol; RV 10-days; z-score over 2 years</p>
+    </td>
+  </tr>
+
+  <!-- Two Charts Side-by-Side -->
+  <tr>
+    <td style="width: 50%; text-align: center; padding: 5px;">
+      <p style="font-weight: bold;">Global carry</p>
+      <img src="cid:dividend_bar_plot.png" style="width: 270px;" />
+    </td>
+    <td style="width: 50%; text-align: center; padding: 5px;">
+      <p style="font-weight: bold;">Global 3m ATM vol</p>
+      <img src="cid:stats_level_plot.png" style="width: 270px;" />
+    </td>
+  </tr>
+
+  <!-- Two More Charts Side-by-Side -->
+  <tr>
+    <td style="width: 50%; text-align: center; padding: 5px;">
+      <p style="font-weight: bold;">SPX and SX5E 3m ATM vol</p>
+      <img src="cid:skew_plot.png" style="width: 270px;" />
+    </td>
+    <td style="width: 50%; text-align: center; padding: 5px;">
+      <p style="font-weight: bold;">SX5E_SPX ATM vol spread</p>
+      <img src="cid:spread_plot.png" style="width: 270px;" />
+    </td>
+  </tr>
+</table>

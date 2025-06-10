@@ -1,0 +1,20 @@
+import pandas as pd
+
+def modify_level0_names(df, udl_spread):
+    # Only modify if udl_spread is not None
+    if udl_spread is not None:
+        # Get current MultiIndex
+        cols = df.columns
+        # Create new level 0 names
+        new_level0 = [f"{name} - {udl_spread}" for name in cols.get_level_values(0)]
+        # Construct new MultiIndex with modified level 0
+        new_cols = pd.MultiIndex.from_arrays(
+            [new_level0] + [cols.get_level_values(i) for i in range(1, cols.nlevels)],
+            names=cols.names
+        )
+        df.columns = new_cols
+    # If udl_spread is None, do nothing
+    return df
+
+# Example usage:
+# df = modify_level0_names(df, udl_spread)

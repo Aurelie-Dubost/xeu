@@ -1,0 +1,63 @@
+import pandas as pd
+import numpy as np
+
+# ------------------------------------------------------------
+# Add a computed "label" level to a MultiIndex column DataFrame.
+# mapping[source] can be:
+#   - a format string using level names: "{udl} {matu}m {moneyness}% vol"
+#   - a callable: f(row_dict) -> str
+# ------------------------------------------------------------
+def add_column_label_level(
+    df: pd.DataFrame,
+    mapping: dict,
+    source_level: str = "df",      # or "source" if that's your top level name
+    new_level: str = "label",
+    clean_spaces: bool = True,
+) -> pd.DataFrame:
+    cols = df.columns
+    if not isinstance(cols, pd.MultiIndex):
+        raise TypeError("df.columns must be a MultiIndex")
+
+    cdf = cols.to_frame(index=False)  # one row per column, one col per level name
+
+    def _fmt(v):
+        if pd.isna(v):
+            return ""
+        # avoid "3.0m" etc
+        if isinstance(v, (np.integer, int)):
+            return str(int(v))
+        if isinstance(v, (np.floating, float)) and float(v).is_integer():
+            return str(int(v))
+        return str(v)
+
+    # pre-format values for stable string formatting
+    # (keeps all existing levels available to templates/callables)
+    records = cdf.to_dict("records")
+    labels = []
+    for r in records:
+        src = r.get(source_level, "")
+        spec = mapping.get(src)
+
+        vals = {k: _fmt(v) for k, v in r.items()}  # stringified view of all levels
+
+        if spec is None:
+            lab = ""  # unmapped source -> blank (or set to src if you prefer)
+        elif callable(spec):
+            lab = str(spec(vals))
+        else:
+            # treat as format string
+            lab = str(spec).format(**vals)
+
+        if clean_spaces:
+            lab = " ".join(lab.split())  # collapse repeated spaces
+        labels.append(lab)
+
+    cdf[new_level] = labels
+    out = df.copy()
+    out.columns = pd.MultiIndex.from_frame(cdf)
+    return out
+
+LABEL_MAP = {
+    "vol":       "{udl} {matu}m {moneyness}% vol",
+    "term_stru": "{udl} {mat_1}m - {mat_2}m vol",
+}

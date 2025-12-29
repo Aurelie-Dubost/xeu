@@ -1,0 +1,1 @@
+summary = summary.rename(columns={u: list(mds_bbg(u).values())[0] for u in pd.Index(summary.columns.get_level_values("udl")).unique() if pd.notna(u)}, level="udl")

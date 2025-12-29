@@ -1,0 +1,5 @@
+out = (lambda L: pd.concat(
+    [d.set_axis(pd.MultiIndex.from_frame(d.columns.to_frame(index=False).reindex(columns=L, fill_value=pd.NA)), axis=1)
+     for d in dfs],
+    axis=1, join="outer"
+))(list(dict.fromkeys(n for d in dfs for n in d.columns.names)))

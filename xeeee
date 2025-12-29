@@ -1,0 +1,19 @@
+# --- Force index column(s) to the same width as the data columns ---
+# Pick the width you want the index to have (here: same as your first data column)
+index_w_min = min_widths[0]
+index_w_max = max_widths[0]
+
+index_styles = [
+    {"selector": "th.row_heading",
+     "props": [("min-width", f"{index_w_min}px"), ("max-width", f"{index_w_max}px")]},
+    {"selector": "th.blank",
+     "props": [("min-width", f"{index_w_min}px"), ("max-width", f"{index_w_max}px")]}
+]
+
+df_styled = (
+    df.style
+      .map(apply_color_map)
+      .format("{:.1f}", na_rep="-")
+      .set_table_styles(table_styles + vertical_lines + index_styles + column_styles)
+      .set_properties(**{"text-align": "center", "font-size": f"{font_size} !important"})
+)

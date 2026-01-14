@@ -1,0 +1,20 @@
+"""
+Disk-backed nested structure using shelve:
+- top-level keys: date_str
+- values: per-date nested dict {udl:{param:{matu:{value: v}}}}
+
+This avoids building the full nested object in memory.
+"""
+
+import shelve
+
+def save_nested_shelve_by_date(df, shelve_path: str, *, dropna: bool = True) -> None:
+    """
+    Stream df into a shelve DB keyed by date_str.
+    """
+    with shelve.open(shelve_path, flag="n") as db:
+        for date_str, payload in iter_nested_dict_by_date(df, dropna=dropna):  # from earlier
+            db[date_str] = payload
+
+
+save_nested_shelve_by_date(df, "nested_by_date.db", dropna=True)

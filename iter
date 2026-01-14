@@ -1,0 +1,66 @@
+"""
+Streaming converter: yields per-date nested dictionaries.
+This prevents kernel crashes by avoiding one huge in-memory nested object.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, Hashable, Iterator, Tuple, List
+import math
+import pandas as pd
+
+
+def iter_nested_dict_by_date(
+    df: pd.DataFrame,
+    *,
+    date_format: str = "%Y-%m-%d",
+    dropna: bool = True,
+) -> Iterator[Tuple[str, Dict[Hashable, Dict[Hashable, Dict[Hashable, Dict[Hashable, Any]]]]]]:
+    """
+    Yield (date_str, nested_for_date) for each row/date in df.
+
+    This is the recommended approach for very large df to avoid OOM crashes.
+    """
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise TypeError("iter_nested_dict_by_date expects df.index to be a pandas.DatetimeIndex.")
+    if not isinstance(df.columns, pd.MultiIndex) or df.columns.nlevels != 4:
+        raise TypeError("iter_nested_dict_by_date expects df.columns to be a 4-level pandas.MultiIndex.")
+
+    dates: List[str] = df.index.strftime(date_format).tolist()
+    col_keys = list(df.columns)
+    values = df.to_numpy(copy=False)
+    n_rows, n_cols = values.shape
+
+    for i in range(n_rows):
+        date_str = dates[i]
+        row_vals = values[i]
+        date_dict: Dict[Hashable, Any] = {}
+
+        for j in range(n_cols):
+            v = row_vals[j]
+            if dropna:
+                if v is None:
+                    continue
+                if isinstance(v, float) and math.isnan(v):
+                    continue
+
+            udl, param, matu, value_key = col_keys[j]
+
+            d_udl = date_dict.get(udl)
+            if d_udl is None:
+                d_udl = {}
+                date_dict[udl] = d_udl
+
+            d_param = d_udl.get(param)
+            if d_param is None:
+                d_param = {}
+                d_udl[param] = d_param
+
+            d_matu = d_param.get(matu)
+            if d_matu is None:
+                d_matu = {}
+                d_param[matu] = d_matu
+
+            d_matu[value_key] = v
+
+        yield date_str, date_dict

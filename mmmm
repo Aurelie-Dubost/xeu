@@ -1,0 +1,38 @@
+# Build WSX5E weekly option tickers (Bloomberg format) for a past as-of date
+# Output example: "WSX5EB 12/12/2025 P5700 Index"
+
+from xbbg import blp
+import pandas as pd
+import re
+
+def _nth_week_code(expiry):
+    # Bloomberg weekly code in your screenshot increments by week within the month:
+    # B=2nd week, C=3rd, D=4th, E=5th (A can appear for 1st week in some months)
+    # We compute which Friday-of-month the expiry is.
+    d = pd.Timestamp(expiry)
+    first = d.replace(day=1)
+    first_friday = first + pd.offsets.Week(weekday=4)  # first Friday on/after 1st
+    n = int(((d - first_friday).days // 7) + 1)         # 1=1st Fri, 2=2nd Fri, ...
+    letters = {1:"A", 2:"B", 3:"C", 4:"D", 5:"E"}
+    return letters.get(n, "E")
+
+def wsx5e_weekly_tickers(asof="20240105", strikes=(5700, 5750), cp=("P","C")):
+    # 1) get expiries as-of (this is the key: this field typically respects date overrides)
+    exp_df = blp.bds("SX5E Index", "CHAIN_EXPIRATION_DATES", SINGLE_DATE_OVERRIDE=asof)
+    date_col = next(c for c in exp_df.columns if "date" in c.lower())
+    exp = pd.to_datetime(exp_df[date_col], errors="coerce").dropna()
+
+    # 2) keep weekly Fridays excluding 3rd-Friday monthlies (15–21)
+    wk = exp[(exp.dt.weekday == 4) & ~exp.dt.day.between(15, 21)]
+
+    # 3) build tickers in WSX5E{code} mm/dd/yyyy {P|C}{strike} Index
+    out = []
+    for d in wk.sort_values():
+        code = _nth_week_code(d)
+        mdy = d.strftime("%m/%d/%Y")
+        for k in strikes:
+            for side in cp:
+                out.append(f"WSX5E{code} {mdy} {side}{int(k)} Index")
+    return out
+
+print(wsx5e_weekly_tickers(asof="20240105")[:20])

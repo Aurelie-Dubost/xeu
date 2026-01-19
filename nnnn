@@ -1,0 +1,25 @@
+# Historical SX5E weekly expiries by querying past option chains (SINGLE_DATE_OVERRIDE)
+
+from xbbg import blp
+import pandas as pd
+
+def wsx5e_weekly_expiries(start="2023-01-01", end=None, asof_freq="W-FRI"):
+    end = end or pd.Timestamp.today().strftime("%Y-%m-%d")
+    asofs = pd.date_range(start, end, freq=asof_freq)
+
+    expiries = set()
+    for d in asofs:
+        chain = blp.bds("SX5E Index", "OPT_CHAIN", SINGLE_DATE_OVERRIDE=d.strftime("%Y%m%d"))
+        tkr = chain.iloc[:, 0].dropna().astype(str)
+        w = tkr[tkr.str.startswith("WSX5E")]
+
+        # expiry date is embedded in the description: "WSX5E* mm/dd/yyyy ..."
+        exp = pd.to_datetime(w.str.extract(r"(\d{2}/\d{2}/\d{4})")[0], format="%m/%d/%Y", errors="coerce")
+        expiries |= set(exp.dropna().dt.date.tolist())
+
+    # “weekly” = Friday expiries excluding 3rd-Friday monthlies (15–21)
+    expiries = pd.to_datetime(sorted(expiries))
+    weeklies = expiries[(expiries.dt.weekday == 4) & ~expiries.dt.day.between(15, 21)]
+    return sorted(weeklies.dt.date.unique())
+
+print(wsx5e_weekly_expiries("2022-01-01"))

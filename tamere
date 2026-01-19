@@ -1,0 +1,30 @@
+# Robust historical SX5E weekly chain pull (tries multiple as-of overrides)
+
+from xbbg import blp
+import pandas as pd
+
+def sx5e_weekly_tickers_asof(asof_yyyymmdd: str, chain_points=5000):
+    # push weekends to previous business day (simple fix)
+    d = pd.to_datetime(asof_yyyymmdd)
+    if d.weekday() >= 5:
+        d = d - pd.tseries.offsets.BDay(1)
+    asof = d.strftime("%Y%m%d")
+
+    # try the common override names used by Bloomberg for bulk/chain requests
+    tries = [
+        dict(SINGLE_DATE_OVERRIDE=asof),
+        dict(CHAIN_DATE=asof),
+        dict(REFERENCE_DATE=asof),
+    ]
+
+    for ov in tries:
+        df = blp.bds("SX5E Index", "OPT_CHAIN", CHAIN_POINTS_OVRD=chain_points, **ov)
+        if df is not None and len(df) > 0:
+            tkr = df.iloc[:, 0].dropna().astype(str)
+            return tkr[tkr.str.startswith("WSX5E")].tolist(), ov  # weekly tickers + which override worked
+
+    return [], None
+
+tickers, used = sx5e_weekly_tickers_asof("20240105")
+print("override_used:", used)
+print(tickers[:30])

@@ -1,0 +1,15 @@
+# SX5E weekly expiries as-of a past date (weeklies = Friday expiries excluding 3rd-Friday monthlies)
+
+from xbbg import blp
+import pandas as pd
+
+asof = "20191010"  # YYYYMMDD (your past valuation date)
+
+chain = blp.bds("SX5E Index", "OPT_CHAIN", single_date_override=asof)
+tickers = chain.iloc[:, 0].dropna().unique().tolist()  # first column is usually the option tickers
+
+exp = blp.bdp(tickers, "OPT_EXPIRE_DT")["OPT_EXPIRE_DT"]
+exp = pd.to_datetime(exp).dt.normalize()
+
+weekly_expiries = sorted(exp[(exp.dt.weekday == 4) & ~exp.dt.day.between(15, 21)].dt.date.unique())
+print(weekly_expiries)

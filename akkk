@@ -1,0 +1,24 @@
+import pandas as pd
+import pandas_market_calendars as mcal
+
+def sx5e_past_weeklies(start="2018-01-01", end=None):
+    end = pd.Timestamp(end or pd.Timestamp.today()).normalize()
+    fridays = pd.date_range(start, end, freq="W-FRI")
+    weeklies = fridays[~fridays.day.between(15, 21)]          # exclude 3rd Friday monthlies
+    weeklies = weeklies[weeklies < pd.Timestamp.today().normalize()]  # past only
+
+    cal = mcal.get_calendar("EUREX")
+    sched = cal.schedule(start_date=weeklies.min().date(), end_date=weeklies.max().date())
+    open_days = pd.DatetimeIndex(sched.index).normalize()
+
+    out = []
+    for d in weeklies:
+        x = d
+        while x not in open_days:   # holiday/closure -> roll back
+            x -= pd.Timedelta(days=1)
+        out.append(x)
+
+    return sorted(pd.DatetimeIndex(out).unique().date)
+
+dates = sx5e_past_weeklies("2024-01-01")
+print(dates[-30:])   # look at the tail to see the most recent past expiries

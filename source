@@ -1,0 +1,78 @@
+# Build past SX5E weekly expiries using Eurex official closures from Eurex Trading Calendar PDF.
+
+import re
+from io import BytesIO
+import requests
+import pandas as pd
+import pdfplumber
+
+ARCHIVE_URL = "https://www.eurex.com/ex-en/trade/trading-calendar/trading-calendar-archive"
+
+def eurex_tradingcalendar_pdf_url(year: int) -> str:
+    """Find the Eurex Trading Calendar PDF URL for a given year from Eurex 'Trading calendar archive'."""
+    html = requests.get(ARCHIVE_URL, timeout=30).text
+    m = re.search(r'(/resource/blob/[^"]+/data/tradingcalendar_' + str(year) + r'_en\.pdf)', html)
+    if not m:
+        raise RuntimeError(f"Could not find tradingcalendar_{year}_en.pdf on Eurex archive page.")
+    return "https://www.eurex.com" + m.group(1)
+
+def eurex_closed_all_derivatives(year: int) -> set[pd.Timestamp]:
+    """Parse the Trading Calendar PDF and extract full-closure dates for 'all derivatives' (no trading)."""
+    url = eurex_tradingcalendar_pdf_url(year)
+    pdf_bytes = requests.get(url, timeout=30).content
+
+    with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
+        text = " ".join((p.extract_text() or "") for p in pdf.pages)
+
+    text = re.sub(r"\s+", " ", text)
+
+    # Two relevant lines exist in the PDFs (examples shown in Eurex 2025 calendar):
+    # - "Eurex is closed for trading and clearing ... in all derivatives: <dates>"
+    # - "Eurex is closed for trading in all derivatives: <dates>"
+    pats = [
+        r"Eurex is closed for trading and clearing.*?in all derivatives:\s*([^\.]+)\.",
+        r"Eurex is closed for trading in all derivatives:\s*([^\.]+)\."
+    ]
+
+    out = set()
+    for pat in pats:
+        m = re.search(pat, text, flags=re.IGNORECASE)
+        if not m:
+            continue
+        for part in m.group(1).split(","):
+            part = part.strip()
+            dm = re.match(r"(\d{1,2})\s+([A-Za-z]+)", part)
+            if dm:
+                out.add(pd.to_datetime(f"{dm.group(1)} {dm.group(2)} {year}", dayfirst=True).normalize())
+    return out
+
+def sx5e_past_weekly_expiries(start="2018-01-01", end=None) -> pd.DatetimeIndex:
+    """
+    Past SX5E weeklies:
+    - Candidates: Fridays
+    - Exclude monthlies: 3rd Friday (day 15-21)
+    - If expiry falls on Eurex full-closure day/weekend: roll back to previous open weekday
+      using Eurex 'closed for trading in all derivatives' from the official calendar PDFs.
+    """
+    end = pd.Timestamp(end or pd.Timestamp.today()).normalize()
+    today = pd.Timestamp.today().normalize()
+
+    fridays = pd.date_range(start=start, end=end, freq="W-FRI")
+    weeklies = fridays[~((fridays.day >= 15) & (fridays.day <= 21))]
+    weeklies = weeklies[weeklies < today]
+
+    years = range(weeklies.min().year, weeklies.max().year + 1)
+    closed = set().union(*(eurex_closed_all_derivatives(y) for y in years))
+
+    adj = []
+    for d in weeklies:
+        x = d.normalize()
+        while x.weekday() >= 5 or x in closed:  # weekend or Eurex closed (all derivatives)
+            x -= pd.Timedelta(days=1)
+        adj.append(x)
+
+    return pd.DatetimeIndex(sorted(set(adj)))
+
+# Example: December 2025 weeklies -> includes 05/12, 12/12 and shifts 26/12 to 23/12 because 24-26 are closed.
+dec25 = sx5e_past_weekly_expiries("2025-12-01", "2025-12-31")
+print(dec25)

@@ -1,0 +1,43 @@
+# Past SX5E (Eurex OESX) weekly expiry dates: Fridays excluding 3rd-Friday monthlies,
+# with optional adjustment to previous Eurex exchange day if Friday is a holiday.
+
+import pandas as pd
+
+def sx5e_past_weekly_expiries(start="2018-01-01", end=None):
+    """Return past weekly expiry dates between start/end (inclusive), adjusted to Eurex exchange days if possible."""
+    end = pd.Timestamp(end or pd.Timestamp.today()).normalize()
+
+    # Candidate Fridays
+    fridays = pd.date_range(start=start, end=end, freq="W-FRI")
+
+    # Remove standard monthlies (3rd Friday: day 15-21)
+    weeklies = fridays[~fridays.day.isin(range(15, 22))]
+
+    # Keep only dates in the past (strictly < today)
+    today = pd.Timestamp.today().normalize()
+    weeklies = weeklies[weeklies < today]
+
+    # Holiday/exchange-day adjustment (best-effort)
+    try:
+        import pandas_market_calendars as mcal
+        cal = mcal.get_calendar("EUREX")
+        sched = cal.schedule(start_date=weeklies.min().date(), end_date=weeklies.max().date())
+        exch_days = pd.DatetimeIndex(sched.index).normalize()
+
+        # If an expiry isn't an exchange day, roll back to previous exchange day
+        adj = []
+        for d in weeklies:
+            if d in exch_days:
+                adj.append(d)
+            else:
+                prev = exch_days[exch_days < d].max()
+                adj.append(prev)
+        weeklies = pd.DatetimeIndex(adj)
+    except Exception:
+        # Fallback: no exchange calendar available -> leave as Fridays (still correct most weeks)
+        pass
+
+    return sorted(pd.DatetimeIndex(weeklies).unique().date)
+
+dates = sx5e_past_weekly_expiries("2020-01-01")
+print(dates[:20], "...", dates[-10:])

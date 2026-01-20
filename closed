@@ -1,0 +1,36 @@
+# Offline Eurex "closed for trading in all derivatives" dates (core set)
+# Prints December closures like 24/12, 25/12, 26/12 (and 31/12 if applicable)
+
+import pandas as pd
+from dateutil.easter import easter
+
+def eurex_all_derivatives_closed(year: int) -> pd.DatetimeIndex:
+    """
+    Offline core closure set commonly applicable to Eurex derivatives:
+    - Jan 1
+    - Good Friday
+    - Easter Monday
+    - May 1
+    - Dec 24
+    - Dec 25
+    - Dec 26
+    - Dec 31
+    """
+    e = pd.Timestamp(easter(year))
+    closed = [
+        pd.Timestamp(year, 1, 1),
+        e - pd.Timedelta(days=2),      # Good Friday
+        e + pd.Timedelta(days=1),      # Easter Monday
+        pd.Timestamp(year, 5, 1),
+        pd.Timestamp(year, 12, 24),
+        pd.Timestamp(year, 12, 25),
+        pd.Timestamp(year, 12, 26),
+        pd.Timestamp(year, 12, 31),
+    ]
+    return pd.DatetimeIndex(sorted(set(pd.to_datetime(closed)))).normalize()
+
+# Example: show the December "closed" days
+year = 2025
+closed = eurex_all_derivatives_closed(year)
+dec_closed = closed[(closed.month == 12)]
+print(dec_closed.strftime("%d/%m/%Y").to_list())
